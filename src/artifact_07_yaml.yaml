@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  mozaikflow-orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mozaikflow_worker
+    restart: unless-stopped
+    environment:
+      - SOLANA_RPC_URL=https://api.devnet.solana.com
+      - SOLANA_WS_URL=wss://api.devnet.solana.com
+      - PROGRAM_ID=MzkPay1111111111111111111111111111111111111
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+      - MERCHANT_EMAIL=finance@enterprise.xyz
+    healthcheck:
+      test: ["CMD-SHELL", "node -e 'process.exit(0)'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"

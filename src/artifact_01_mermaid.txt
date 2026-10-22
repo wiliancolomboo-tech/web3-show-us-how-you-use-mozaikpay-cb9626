@@ -1,0 +1,46 @@
+flowchart TD
+    subgraph ClientLayer [Client & Merchant Tier]
+        Buyer[Enterprise Client / Buyer]
+        Dashboard[MozaikFlow Executive Dashboard]
+    end
+
+    subgraph MozaikGateway [MozaikPay Payment Rails]
+        MP_Checkout[MozaikPay Checkout API / SDK]
+        MP_Router[MozaikPay Smart Liquidity Router]
+    end
+
+    subgraph SolanaOnChain [Solana Anchor Program: mozaik_escrow]
+        EscrowPDA[Program Derived Address Vault]
+        StateAccount[Escrow State: Milestones, Auth, Status]
+        SPL_Vault[Associated Token Account: USDC/USDT]
+    end
+
+    subgraph OffChainWorker [MozaikFlow Enterprise Daemon]
+        RPC_Listener[Solana Geyser / WebSocket Listener]
+        EventProcessor[Event Validator & Cryptographic Verifier]
+        AccountingEngine[Accounting & Reconciliation Engine]
+    end
+
+    subgraph EnterpriseIntegrations [Enterprise Notification & ERP Sync]
+        ResendAPI[Resend API: Automated Invoice & Receipts]
+        SlackWebhook[Slack Ops Channel: Treasury Alerts]
+        ERP_Export[ERP / Quickbooks Webhook Endpoint]
+    end
+
+    Buyer -->|1. Initiates Invoice Payment| MP_Checkout
+    MP_Checkout -->|2. Routes & Swaps Asset| MP_Router
+    MP_Router -->|3. Deposits SPL to Escrow PDA| EscrowPDA
+    MP_Router -->|4. Calls initialize_escrow| StateAccount
+    EscrowPDA -->|Holds SPL Tokens| SPL_Vault
+
+    StateAccount -.->|Emits EscrowFunded Event| RPC_Listener
+    RPC_Listener -->|Stream Event Payload| EventProcessor
+    EventProcessor --> AccountingEngine
+
+    AccountingEngine -->|Dispatches Paid Invoice| ResendAPI
+    AccountingEngine -->|Broadcasts Settlement Alert| SlackWebhook
+    AccountingEngine -->|Reconciles Ledger| ERP_Export
+
+    Dashboard -->|5. Buyer Approves Milestone Deliverable| StateAccount
+    StateAccount -->|6. Releases Funds to Merchant ATA| SPL_Vault
+    StateAccount -.->|Emits MilestoneReleased Event| RPC_Listener
