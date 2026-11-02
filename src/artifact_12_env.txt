@@ -1,0 +1,11 @@
+# Solana RPC Infrastructure
+SOLANA_RPC_URL=https://api.devnet.solana.com
+PROGRAM_ID=MoZkPyS1t1111111111111111111111111111111111
+
+# MozaikPay Config
+MERCHANT_ID=CORP_ALPHA_99
+SENDER_EMAIL=billing@mozaikpay.com
+
+# Enterprise Integrations
+RESEND_API_KEY=re_123456789abcdef
+SLACK_WEBHOOK_URL=https://api.example.com/webhooks/alerts/placeholder

@@ -1,46 +1,27 @@
 flowchart TD
-    subgraph ClientLayer [Client & Merchant Tier]
-        Buyer[Enterprise Client / Buyer]
-        Dashboard[MozaikFlow Executive Dashboard]
+    subgraph ClientLayer ["Client & Customer Layer"]
+        A[Customer / Subscriber Wallet] -->|1. Sign & Submit Checkout / Subscription Tx| B[MozaikPay Nexus Web SDK]
     end
 
-    subgraph MozaikGateway [MozaikPay Payment Rails]
-        MP_Checkout[MozaikPay Checkout API / SDK]
-        MP_Router[MozaikPay Smart Liquidity Router]
+    subgraph SolanaOnChain ["Solana Blockchain (MozaikPay Nexus Core Engine)"]
+        B -->|2. Route Settlement Instruction| C{Nexus Settlement Program}
+        C -->|3a. Check Allowances & Time Window| D[(Subscriber PDA Vault)]
+        C -->|3b. Atomic Multi-Split Transfer| E[SPL Token / Token-2022 Mint USDC]
+        E -->|Transfer 85%| F[Merchant Treasury PDA]
+        E -->|Transfer 10%| G[Affiliate / Partner Account]
+        E -->|Transfer 5%| H[Protocol Reserve / Fee Sink]
+        C -->|4. Emit PaymentSettled Event & Memo| I[Transaction Log & Ledger]
     end
 
-    subgraph SolanaOnChain [Solana Anchor Program: mozaik_escrow]
-        EscrowPDA[Program Derived Address Vault]
-        StateAccount[Escrow State: Milestones, Auth, Status]
-        SPL_Vault[Associated Token Account: USDC/USDT]
+    subgraph DaemonLayer ["Off-Chain Enterprise Gateway Daemon"]
+        I -->|5. WebSocket Slot Listener / RPC Polling| J[MozaikPay Nexus Relay Daemon]
+        J -->|6. Idempotency Check & Replay Defense| K[(Redis / SQLite State Cache)]
+        K -->|State: Valid & Unprocessed| L[Cryptographic Receipt Generator]
     end
 
-    subgraph OffChainWorker [MozaikFlow Enterprise Daemon]
-        RPC_Listener[Solana Geyser / WebSocket Listener]
-        EventProcessor[Event Validator & Cryptographic Verifier]
-        AccountingEngine[Accounting & Reconciliation Engine]
+    subgraph EnterpriseServices ["Enterprise External APIs"]
+        L -->|7. Disptach Tax-Compliant Invoice| M[Resend API - HTML/PDF Invoicing]
+        M -->|Deliver Email Receipt| N[Customer Inbox]
+        L -->|8. Push Real-Time Settlement Alert| O[Slack Webhook / Ops Channel]
+        O -->|Merchant Alerts| P[Enterprise Accounting Slack]
     end
-
-    subgraph EnterpriseIntegrations [Enterprise Notification & ERP Sync]
-        ResendAPI[Resend API: Automated Invoice & Receipts]
-        SlackWebhook[Slack Ops Channel: Treasury Alerts]
-        ERP_Export[ERP / Quickbooks Webhook Endpoint]
-    end
-
-    Buyer -->|1. Initiates Invoice Payment| MP_Checkout
-    MP_Checkout -->|2. Routes & Swaps Asset| MP_Router
-    MP_Router -->|3. Deposits SPL to Escrow PDA| EscrowPDA
-    MP_Router -->|4. Calls initialize_escrow| StateAccount
-    EscrowPDA -->|Holds SPL Tokens| SPL_Vault
-
-    StateAccount -.->|Emits EscrowFunded Event| RPC_Listener
-    RPC_Listener -->|Stream Event Payload| EventProcessor
-    EventProcessor --> AccountingEngine
-
-    AccountingEngine -->|Dispatches Paid Invoice| ResendAPI
-    AccountingEngine -->|Broadcasts Settlement Alert| SlackWebhook
-    AccountingEngine -->|Reconciles Ledger| ERP_Export
-
-    Dashboard -->|5. Buyer Approves Milestone Deliverable| StateAccount
-    StateAccount -->|6. Releases Funds to Merchant ATA| SPL_Vault
-    StateAccount -.->|Emits MilestoneReleased Event| RPC_Listener

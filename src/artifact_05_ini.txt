@@ -1,0 +1,17 @@
+# Solana Network Configuration
+SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+SOLANA_WS_URL=wss://api.mainnet-beta.solana.com
+MOZAIKPAY_PROGRAM_ID=MoZkPay111111111111111111111111111111111111
+
+# Authority Keypair (JSON array format)
+MERCHANT_PRIVATE_KEY=[12,45,231,100,56,...]
+
+# Enterprise Notifications
+RESEND_API_KEY=re_live_98ab76cd54ef32ba
+RECEIPT_FROM_EMAIL=receipts@enterprise.mozaikflow.io
+SLACK_WEBHOOK_URL=https://api.example.com/webhooks/alerts/placeholder
+
+# Microservice Settings
+PORT=8080
+METRICS_PORT=9090
+LOG_LEVEL=info

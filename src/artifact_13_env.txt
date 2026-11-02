@@ -1,0 +1,14 @@
+# Solana Configuration
+SOLANA_RPC_URL=https://api.devnet.solana.com
+SOLANA_NETWORK=devnet
+
+# MozaikPay Credentials
+MOZAIKPAY_API_KEY=mzk_live_948f2b71c40284ae90
+MOZAIKPAY_WEBHOOK_PUBKEY=f26c59b48fce89115b0213d29a59b21dc37bcfe8e48811d739b62657e0ad52f4
+
+# Enterprise Connectors
+RESEND_API_KEY=re_123456789_abcdef
+SLACK_WEBHOOK_URL=https://api.example.com/webhooks/alerts/placeholder
+
+# Relayer Service
+PORT=8080

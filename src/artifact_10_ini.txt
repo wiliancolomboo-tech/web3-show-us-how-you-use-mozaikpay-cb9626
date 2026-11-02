@@ -1,0 +1,8 @@
+SOLANA_RPC_URL=https://api.devnet.solana.com
+SOLANA_WS_URL=wss://api.devnet.solana.com
+PROGRAM_ID=MoZaiKPAY1111111111111111111111111111111111
+REDIS_URL=redis://redis:6379
+RESEND_API_KEY=re_123456789_enterpriseKey
+SLACK_WEBHOOK_URL=https://api.example.com/webhooks/alerts/placeholder
+RECEIPT_FROM_EMAIL=receipts@mozaikpay.network
+NOTIFICATION_TARGET_EMAIL=treasury@enterprise.com

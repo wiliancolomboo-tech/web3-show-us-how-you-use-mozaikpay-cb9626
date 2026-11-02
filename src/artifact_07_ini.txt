@@ -1,0 +1,8 @@
+SOLANA_RPC_URL=https://api.devnet.solana.com
+PROGRAM_ID=MzkF1ow111111111111111111111111111111111111
+KEEPER_KEYPAIR_JSON=[12,234,89,...] # Byte array of keeper wallet
+SLACK_WEBHOOK_URL=https://api.example.com/webhooks/alerts/placeholder
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxxx
+NOTIFICATION_EMAIL=enterprise-cfo@company.com
+POLL_INTERVAL_MS=15000
+PORT=8080

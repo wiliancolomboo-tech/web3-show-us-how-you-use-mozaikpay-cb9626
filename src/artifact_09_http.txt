@@ -1,0 +1,11 @@
+GET /health
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "status": "healthy",
+  "programId": "MozkEng1ne1111111111111111111111111111111111",
+  "connection": "connected",
+  "slotHeight": 284192019,
+  "uptimeSeconds": 86420
+}

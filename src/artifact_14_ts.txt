@@ -1,0 +1,50 @@
+#!/usr/bin/env node
+import { Command } from "commander";
+
+const program = new Command();
+
+program
+  .name("mozaikpay-relay")
+  .description("MozaikPay Solana payment operations CLI");
+
+program
+  .command("create-order")
+  .requiredOption("--amount <lamports>")
+  .requiredOption("--payer <public-key>")
+  .requiredOption("--email <email>")
+  .action(async (options) => {
+    const response = await fetch(`${process.env.RELAY_URL}/v1/orders`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        amountLamports: options.amount,
+        payer: options.payer,
+        email: options.email,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+
+    console.log(JSON.stringify(await response.json(), null, 2));
+  });
+
+program
+  .command("confirm")
+  .requiredOption("--order-id <uuid>")
+  .requiredOption("--signature <signature>")
+  .action(async (options) => {
+    const response = await fetch(
+      `${process.env.RELAY_URL}/v1/orders/${options.orderId}/confirm`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ signature: options.signature }),
+      },
+    );
+
+    console.log(JSON.stringify(await response.json(), null, 2));
+  });
+
+await program.parseAsync();

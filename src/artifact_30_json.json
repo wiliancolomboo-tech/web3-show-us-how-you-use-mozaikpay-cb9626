@@ -1,0 +1,9 @@
+{
+  "requestId": "req_123",
+  "orderId": "ord_123",
+  "providerPaymentId": "pay_123",
+  "signature": "5abc...",
+  "state": "SETTLED",
+  "deliveryKey": "sha256:...",
+  "event": "payment_settled"
+}

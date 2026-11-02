@@ -1,0 +1,9 @@
+{
+  "status": "healthy",
+  "service": "mozaikflow-clearinghouse-relay",
+  "programId": "MoZkC1ear1ngHouse11111111111111111111111111",
+  "activeWebsockets": 1,
+  "processedEventsTotal": 1420,
+  "uptimeSeconds": 86400,
+  "latencyMs": 14
+}

@@ -1,0 +1,12 @@
+# Solana Cluster Parameters
+SOLANA_RPC_URL=https://api.devnet.solana.com
+SOLANA_WS_URL=wss://api.devnet.solana.com
+PROGRAM_ID=MoZaiKPAY1111111111111111111111111111111111
+
+# Enterprise Resend API
+RESEND_API_KEY=re_123456789_abcdefghijklmnopqrstuvwxyz
+RESEND_SENDER_EMAIL=invoicing@yourbusiness.com
+TEST_RECEIPT_EMAIL=ops@yourbusiness.com
+
+# Enterprise Slack Telemetry
+SLACK_WEBHOOK_URL=https://api.example.com/webhooks/alerts/placeholder

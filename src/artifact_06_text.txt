@@ -1,0 +1,8 @@
+server/
+├── package.json
+├── tsconfig.json
+└── src/
+    ├── server.ts
+    ├── mozaikClient.ts
+    ├── notificationEngine.ts
+    └── solanaVerifier.ts

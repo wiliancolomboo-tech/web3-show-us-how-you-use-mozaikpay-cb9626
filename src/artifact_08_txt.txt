@@ -1,0 +1,19 @@
+================================================================================
+                    MOZAIKFLOW OPERATIONAL RUNBOOK
+================================================================================
+
+1. INCIDENT: FAILED WEBHOOK SIGNATURE (HTTP 403)
+   - Diagnostic: Check logs for "Invalid cryptographic signature".
+   - Mitigation: Ensure MozaikPay webhook settings match WEBHOOK_SECRET in .env.
+   - Action: Rotate secret in MozaikPay console and trigger environment reload:
+     $ docker-compose exec mozaikflow-daemon kill -HUP 1
+
+2. INCIDENT: RESEND INVOICE EMAIL BOUNCE
+   - Diagnostic: Inspect Resend console dashboard for domain SPF/DKIM verification.
+   - Mitigation: Fallback recipient is set to accounting@enterprise-buyer.com.
+
+3. INCIDENT: SOLANA RPC RATE LIMIT / WEBSOCKET DROP
+   - Diagnostic: Healthcheck endpoint /health returns non-200 or lag > 250 slots.
+   - Mitigation: The daemon supports automatic fallback. Set backup RPC:
+     SOLANA_RPC_URL=https://solana-mainnet.g.alchemy.com/v2/YOUR_KEY
+================================================================================

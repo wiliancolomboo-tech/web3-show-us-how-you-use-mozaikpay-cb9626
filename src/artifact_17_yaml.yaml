@@ -1,0 +1,46 @@
+version: "3.8"
+
+services:
+  mozaikflow-redis:
+    image: redis:7-alpine
+    container_name: mozaikflow-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-strongredispass}
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mozaikflow-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mozaikflow-worker
+    restart: unless-stopped
+    depends_on:
+      mozaikflow-redis:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - NODE_ENV=production
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-strongredispass}@mozaikflow-redis:6379
+      - SOLANA_RPC_URL=${SOLANA_RPC_URL:-https://api.mainnet-beta.solana.com}
+      - MOZAIK_API_KEY=${MOZAIK_API_KEY}
+      - MOZAIK_WEBHOOK_SECRET=${MOZAIK_WEBHOOK_SECRET}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+volumes:
+  redis_data:

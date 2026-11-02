@@ -1,0 +1,1 @@
+yarn cli update-merchant --new-affiliate <NEW_PUBKEY>

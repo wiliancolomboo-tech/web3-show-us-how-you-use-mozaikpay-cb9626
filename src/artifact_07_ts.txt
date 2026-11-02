@@ -1,0 +1,69 @@
+import {
+  Connection,
+  ParsedInstruction,
+  PublicKey,
+  SystemProgram,
+  TransactionResponse,
+} from "@solana/web3.js";
+import crypto from "node:crypto";
+
+export type PaymentExpectation = {
+  orderId: string;
+  payer: PublicKey;
+  merchant: PublicKey;
+  amountLamports: bigint;
+  programId: PublicKey;
+};
+
+export type VerificationResult =
+  | { ok: true; slot: number; blockTime: number | null }
+  | { ok: false; reason: string };
+
+export function orderHash(orderId: string): Buffer {
+  return crypto.createHash("sha256").update(orderId, "utf8").digest();
+}
+
+export async function verifyPayment(
+  connection: Connection,
+  signature: string,
+  expectation: PaymentExpectation,
+): Promise<VerificationResult> {
+  const tx = await connection.getParsedTransaction(signature, {
+    commitment: "confirmed",
+    maxSupportedTransactionVersion: 0,
+  });
+
+  if (!tx) return { ok: false, reason: "transaction_not_found" };
+  if (tx.meta?.err) return { ok: false, reason: "transaction_failed" };
+
+  const payerKey = expectation.payer.toBase58();
+  const merchantKey = expectation.merchant.toBase58();
+
+  const payerInstruction = tx.transaction.message.instructions.find(
+    (ix): ix is ParsedInstruction =>
+      "parsed" in ix &&
+      ix.program === "system" &&
+      ix.parsed?.type === "transfer" &&
+      ix.parsed.info?.source === payerKey &&
+      ix.parsed.info?.destination === merchantKey &&
+      BigInt(ix.parsed.info?.lamports ?? 0) === expectation.amountLamports,
+  );
+
+  if (!payerInstruction) {
+    return { ok: false, reason: "matching_transfer_not_found" };
+  }
+
+  const programInstruction = tx.transaction.message.instructions.find(
+    (ix) => ix.programId?.equals(expectation.programId),
+  );
+
+  if (!programInstruction) {
+    return { ok: false, reason: "settlement_program_instruction_not_found" };
+  }
+
+  return {
+    ok: true,
+    slot: tx.slot,
+    blockTime: tx.blockTime,
+  };
+}

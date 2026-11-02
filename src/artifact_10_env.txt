@@ -1,0 +1,9 @@
+SOLANA_RPC_URL=https://api.devnet.solana.com
+   MOZAIK_PROGRAM_ID=Mozk7Pj111111111111111111111111111111111111
+   SOLANA_KEYPAIR_JSON=[1,2,3,...]
+   SLACK_WEBHOOK_URL=https://api.example.com/webhooks/alerts/placeholder
+   DISCORD_WEBHOOK_URL=https://api.example.com/webhooks/alerts/placeholder
+   RESEND_API_KEY=re_123456789
+   RESEND_FROM_EMAIL=billing@mozaikpulse.xyz
+   ACCOUNTING_EMAIL_RECEIVER=treasury@enterprise-dao.com
+   PORT=8080

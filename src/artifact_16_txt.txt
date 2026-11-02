@@ -1,0 +1,4 @@
+Under the hood:
+1/ Anchor Program: Direct CPI `transfer_checked` splits token flows into recipient ATAs atomically in 1 transaction. No intermediate hot wallet.
+2/ Node.js Orchestrator: Tracks reference pubkeys via Solana WebSockets with zero dropped events.
+3/ Enterprise Ready: Automated @resend receipts + Slack ops alerts.

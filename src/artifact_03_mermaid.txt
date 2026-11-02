@@ -1,0 +1,31 @@
+flowchart TD
+    subgraph Client Layer
+        A[Customer dApp / Mobile POS]
+        B[Merchant Admin Dashboard]
+    end
+
+    subgraph MozaikFlow Core Engine
+        C[MozaikPay Routing SDK]
+        D[Anchor Program: mozaikflow_core]
+        E[Solana RPC Cluster - Triton / Helius]
+    end
+
+    subgraph External Infrastructure
+        F[Jupiter v6 Swap API]
+        G[Redis Queue - BullMQ]
+        H[Enterprise Event Daemon]
+        I[Slack Incoming Webhooks]
+        J[Resend Transactional Email Engine]
+    end
+
+    A -->|1. Request Payment Intent| C
+    B -->|Create Invoices & Manage Rules| C
+    C -->|2. Get Swap Quote| F
+    C -->|3. Construct & Sign Payload| E
+    E -->|4. Process State Update| D
+    D -->|5. Program Event: InvoicePaid| E
+    E -->|6. Geyser / WebSocket Stream| H
+    H -->|Push Event Job| G
+    G -->|Worker Dequeue| H
+    H -->|7. Post Alert| I
+    H -->|8. Send Receipt| J

@@ -1,0 +1,7 @@
+{
+  "status": "UP",
+  "service": "mozaikflow-settlement-engine",
+  "solana_rpc": "healthy",
+  "current_epoch": 612,
+  "uptime_seconds": 86400
+}

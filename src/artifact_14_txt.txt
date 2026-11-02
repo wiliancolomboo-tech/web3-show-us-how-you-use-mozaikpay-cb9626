@@ -1,0 +1,4 @@
+How it works under the hood:
+1️⃣ Cryptographic reference PDAs eliminate payment race conditions & replays
+2️⃣ Native Anchor program splits funds atomically: 85% Merchant, 10% Automated Tax Reserve, 5% Treasury
+3️⃣ Zero-latency off-chain worker triggers @resend receipts & real-time Slack ops alerts 🛠️

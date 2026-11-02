@@ -1,0 +1,6 @@
+How MozaikFlow supercharges @MozaikPay:
+⚡️ Non-custodial split routing on Solana via Anchor smart vaults
+🧾 Instant cryptographic verification of reference keys & receipts
+📬 Automated enterprise invoicing via @resend & real-time telemetry to Slack
+
+Zero polling. 100% idempotent. Sub-second slot finality.

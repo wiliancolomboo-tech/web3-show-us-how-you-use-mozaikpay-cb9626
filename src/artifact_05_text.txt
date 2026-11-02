@@ -1,0 +1,15 @@
+mozaikpay-relay/
+├── apps/
+│   ├── api/src/server.ts
+│   ├── worker/src/worker.ts
+│   └── cli/src/index.ts
+├── packages/
+│   ├── core/src/verify.ts
+│   ├── integrations/src/mozaikpay.ts
+│   └── db/src/schema.sql
+├── programs/mozaikpay_relay/src/lib.rs
+├── tests/verify.test.ts
+├── Dockerfile
+├── docker-compose.yml
+├── package.json
+└── .env.example

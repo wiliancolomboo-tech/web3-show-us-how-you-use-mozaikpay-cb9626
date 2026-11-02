@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  mozaik-crank:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      - SOLANA_RPC_URL=https://api.devnet.solana.com
+      - SOLANA_FALLBACK_RPC_URL=https://devnet.helius-rpc.com/?api-key=YOUR_KEY
+      - PROGRAM_ID=MozkF1ow11111111111111111111111111111111111
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - KEYPAIR_PATH=/secrets/crank-keypair.json
+      - LOG_LEVEL=info
+    volumes:
+      - ./secrets:/secrets:ro
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8080/health').then(r => r.status === 200 ? process.exit(0) : process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"

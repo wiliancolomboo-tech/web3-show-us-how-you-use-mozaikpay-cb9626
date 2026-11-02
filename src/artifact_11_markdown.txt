@@ -1,0 +1,20 @@
+🧵 1/3: Web3 recurring subscriptions are finally frictionless! 🚀 
+
+We are proud to unveil MozaikFlow — an enterprise-grade, non-custodial recurring subscription and automated multi-split revenue settlement engine built on @Solana with @MozaikPay! ⚡️
+
+Here is how we solved recurring Web3 B2B billing 👇
+
+🧵 2/3: Most crypto subscription models force upfront lockups or clunky manual approvals each month. 
+
+With MozaikFlow:
+✅ Non-custodial SPL token delegation
+✅ Deterministic Anchor epoch enforcement
+✅ Atomic split disbursement to platform & affiliates
+✅ Automated invoicing via @resend & Slack ops alerting!
+
+🧵 3/3: Sub-second finality, micro-penny fees, and zero custodial friction for enterprise SaaS. 
+
+Check out our production Anchor program, keeper daemon, and turnkey Docker setup:
+🔗 https://github.com/mozaikflow/mozaikpay-enterprise-billing
+
+Built for the @MozaikPay hackathon bounty! #Solana #Web3Payments #DeFi #MozaikPay

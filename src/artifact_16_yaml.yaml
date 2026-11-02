@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  mozaik-redis:
+    image: redis:7-alpine
+    container_name: mozaik-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass ""
+
+  mozaik-relayer:
+    build:
+      context: ./relayer
+      dockerfile: Dockerfile
+    container_name: mozaik-relayer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - REDIS_HOST=mozaik-redis
+      - REDIS_PORT=6379
+      - SOLANA_RPC_URL=https://api.devnet.solana.com
+      - MOZAIKPAY_WEBHOOK_SECRET=7f884f3e5b7a1c938d2105432abc
+      - RESEND_API_KEY=re_live_mozaik_demo
+      - SENDER_EMAIL=receipts@mozaikpay.io
+      - SLACK_WEBHOOK_URL=https://api.example.com/webhooks/alerts/placeholder
+    depends_on:
+      mozaik-redis:
+        condition: service_started
+
+volumes:
+  redis_data:

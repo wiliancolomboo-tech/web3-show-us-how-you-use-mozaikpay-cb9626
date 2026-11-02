@@ -1,0 +1,13 @@
+1/3 🌐 Accepting crypto payments is easy; operating enterprise-grade automated treasury disbursement is hard.
+
+Introducing MozaikPay Ops Engine: The institutional payment reconciliation & automated revenue-split system built on @MozaikPay and @solana! ⚡️🧵👇
+
+2/3 🔐 Powered by MozaikPay's high-speed checkout rails, our engine brings:
+✅ Ed25519 zero-trust signed webhook validation
+✅ Autonomous on-chain revenue splits (80% Ops, 15% Staking, 5% Affiliate) via Anchor PDA vaults
+✅ Instant Slack alerts + @resend transactional tax receipts
+
+3/3 📦 100% open-source, turnkey Docker containerization, comprehensive test matrix, and zero-leakage settlement logic.
+
+Experience frictionless Web3 merchant infrastructure with @MozaikPay:
+https://github.com/enterprise-mozaik/mozaik-ops-engine 🚀 #Solana #MozaikPay #Web3Payments

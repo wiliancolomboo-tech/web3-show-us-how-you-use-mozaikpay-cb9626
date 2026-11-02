@@ -1,0 +1,2 @@
+mesh_processed_transactions_total 142
+  mesh_daemon_healthy 1

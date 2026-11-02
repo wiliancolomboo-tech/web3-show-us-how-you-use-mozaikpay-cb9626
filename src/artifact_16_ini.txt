@@ -1,0 +1,14 @@
+# Solana Network Settings
+SOLANA_RPC_URL=https://api.devnet.solana.com
+PROGRAM_ID=MozPay1111111111111111111111111111111111111
+
+# Enterprise Email Integration (Resend)
+RESEND_API_KEY=re_123456789_abcdefghijklmnopqrstuvwxyz
+SENDER_EMAIL=billing@yourdomain.com
+
+# Operations Webhook Integration (Discord / Slack)
+DISCORD_WEBHOOK_URL=https://api.example.com/webhooks/alerts/placeholder
+
+# Port & Node Environment
+PORT=8080
+NODE_ENV=production

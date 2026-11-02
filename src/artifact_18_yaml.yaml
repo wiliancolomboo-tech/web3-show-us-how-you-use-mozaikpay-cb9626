@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  mozaikflow-relayer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mozaikflow-orchestrator
+    restart: always
+    environment:
+      - PORT=8080
+      - SOLANA_RPC_URL=https://api.devnet.solana.com
+      - PROGRAM_ID=MozkF1ow11111111111111111111111111111111111
+      - OPERATOR_PRIVATE_KEY=[1,2,3...255]
+      - SLACK_WEBHOOK_URL=https://api.example.com/webhooks/alerts/placeholder
+      - RESEND_API_KEY=re_123456789mozaik
+      - POLL_INTERVAL_MS=10000
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s

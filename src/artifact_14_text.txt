@@ -1,0 +1,16 @@
+1/3 ⚡ We are proud to unveil MozaikPulse: The Enterprise POS & Treasury Settlement Engine powered by @MozaikPay on @solana! 
+
+Accepting crypto is easy. Real-time split settlement, tax withholding, and ERP reconciliation is hard. Here is how we solved it: 👇 🧵
+
+2/3 🛠️ Built on native Solana Anchor & MozaikPay protocols:
+• Atomic 3-way token split (Merchant 95%, Platform 3%, Automated Tax Withholding 2%)
+• Sub-second POS QR checkout
+• Ed25519 webhook idempotency engine
+• Instant customer receipts via @resend + @Slack alerts
+
+3/3 🚀 Non-custodial, chargeback-proof, and enterprise-grade. MozaikPay transforms Solana into the ultimate institutional settlement layer.
+
+Check out our full open-source architecture, Docker stack, and live test suite:
+github.com/developer/mozaik-pulse 
+
+#Solana #MozaikPay #Web3Payments #DeFi #SolanaPay

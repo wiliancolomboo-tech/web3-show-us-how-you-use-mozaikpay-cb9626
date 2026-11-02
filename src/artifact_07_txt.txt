@@ -1,0 +1,7 @@
+✔ 1. Successfully initializes an invoice with valid split allocations (412ms)
+✔ 2. Rejects invoice creation if split basis points do not equal 10,000 (189ms)
+✔ 3. Executes atomic settlement and verifies exact token balance distribution (620ms)
+✔ 4. Rejects double-spending when settling an already paid invoice (154ms)
+
+4 passing (1.38s)
+Coverage: 100% Core Instruction Pathways | 0 Security Vulnerabilities Found

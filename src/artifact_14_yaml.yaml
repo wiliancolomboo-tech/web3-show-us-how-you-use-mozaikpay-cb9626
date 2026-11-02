@@ -1,0 +1,24 @@
+version: "3.8"
+
+services:
+  mozaikflow-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mozaikflow_worker
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - SOLANA_RPC_URL=https://api.devnet.solana.com
+      - MOZAIK_API_KEY=${MOZAIK_API_KEY}
+      - MOZAIK_WEBHOOK_SECRET=${MOZAIK_WEBHOOK_SECRET}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s

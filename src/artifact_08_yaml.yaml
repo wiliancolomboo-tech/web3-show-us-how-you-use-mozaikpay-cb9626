@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  mozaikpay-nexus-daemon:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mozaikpay-nexus-daemon
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+      - PROGRAM_ID=MoZaiKPAYNexus11111111111111111111111111111
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+      - MERCHANT_NOTIFICATION_EMAIL=ops@merchant.com
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:8080/health', (r) => {if (r.statusCode !== 200) process.exit(1)})\"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"

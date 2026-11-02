@@ -1,0 +1,22 @@
+.PHONY: build test deploy-devnet run-docker clean
+
+build:
+	anchor build
+
+test:
+	anchor test
+
+deploy-devnet:
+	solana config set --url devnet
+	anchor build
+	solana program deploy target/deploy/mozaik_escrow_engine.so --program-id target/deploy/mozaik_escrow_engine-keypair.json
+
+run-docker:
+	docker compose up -d --build
+
+logs:
+	docker compose logs -f mozaikflow-sentinel
+
+clean:
+	cargo clean
+	rm -rf dist node_modules

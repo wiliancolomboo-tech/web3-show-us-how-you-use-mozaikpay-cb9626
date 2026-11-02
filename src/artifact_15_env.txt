@@ -1,0 +1,6 @@
+PORT=3000
+SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+MOZAIK_API_KEY=mzk_live_9a87d0c72f10b2
+MOZAIK_WEBHOOK_SECRET=whsec_884b29c9ef63e30f14d
+RESEND_API_KEY=re_123456789abcdef
+SLACK_WEBHOOK_URL=https://api.example.com/webhooks/alerts/placeholder

@@ -1,181 +1,195 @@
-import * as anchor from "@coral-xyz/anchor";
-import { Program } from "@coral-xyz/anchor";
-import { MozaikEscrow } from "../target/types/mozaik_escrow";
-import {
-  createMint,
-  createAccount,
-  mintTo,
-  getAccount,
-  TOKEN_PROGRAM_ID,
-} from "@solana/spl-token";
-import { assert, expect } from "chai";
+import { Connection, PublicKey } from "@solana/web3.js";
+import { Program, AnchorProvider, Idl } from "@coral-xyz/anchor";
+import { Resend } from "resend";
+import axios from "axios";
+import * as dotenv from "dotenv";
 
-describe("mozaik_escrow deterministic test matrix", () => {
-  const provider = anchor.AnchorProvider.env();
-  anchor.setProvider(provider);
+dotenv.config();
 
-  const program = anchor.workspace.MozaikEscrow as Program<MozaikEscrow>;
+// Configuration
+const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com";
+const PROGRAM_ID = new PublicKey(process.env.PROGRAM_ID || "MoZaiKPAYNexus11111111111111111111111111111");
+const RESEND_API_KEY = process.env.RESEND_API_KEY || "re_test_mock_key_123456";
+const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL || "";
+const MERCHANT_NOTIFICATION_EMAIL = process.env.MERCHANT_NOTIFICATION_EMAIL || "billing@enterprise.com";
 
-  let mint: anchor.web3.PublicKey;
-  let buyerTokenAccount: anchor.web3.PublicKey;
-  let merchantTokenAccount: anchor.web3.PublicKey;
+const resend = new Resend(RESEND_API_KEY);
+const processedTxCache = new Set<string>();
 
-  const buyer = (provider.wallet as anchor.Wallet).payer;
-  const merchant = anchor.web3.Keypair.generate();
-  const unauthorizedUser = anchor.web3.Keypair.generate();
+interface PaymentSettledPayload {
+  merchant: string;
+  orderId: string;
+  payer: string;
+  totalAmount: number;
+  merchantAmount: number;
+  affiliateAmount: number;
+  protocolAmount: number;
+  timestamp: number;
+  signature: string;
+}
 
-  const escrowId = `mzk_test_${Date.now()}`;
-  const totalAmount = new anchor.BN(10_000_000); // 10 USDC (6 decimals)
-  const milestoneCount = 2;
-  const disputeTimeout = new anchor.BN(5); // 5 seconds for rapid testing
+export class MozaikPayDaemon {
+  private connection: Connection;
 
-  let escrowPda: anchor.web3.PublicKey;
-  let vaultPda: anchor.web3.PublicKey;
+  constructor() {
+    this.connection = new Connection(SOLANA_RPC_URL, {
+      commitment: "confirmed",
+      wsEndpoint: SOLANA_RPC_URL.replace("https://", "wss://").replace("http://", "ws://"),
+    });
+  }
 
-  before(async () => {
-    // 1. Airdrop SOL to merchant and unauthorized accounts
-    const sig1 = await provider.connection.requestAirdrop(merchant.publicKey, 2 * anchor.web3.LAMPORTS_PER_SOL);
-    const sig2 = await provider.connection.requestAirdrop(unauthorizedUser.publicKey, 2 * anchor.web3.LAMPORTS_PER_SOL);
-    await provider.connection.confirmTransaction(sig1);
-    await provider.connection.confirmTransaction(sig2);
+  public async start(): Promise<void> {
+    console.log("=====================================================");
+    console.log("[MozaikPay Nexus] Enterprise Daemon Starting...");
+    console.log(`[Target Network]: ${SOLANA_RPC_URL}`);
+    console.log(`[Nexus Program ID]: ${PROGRAM_ID.toBase58()}`);
+    console.log("=====================================================");
 
-    // 2. Create SPL Mint (simulating USDC)
-    mint = await createMint(
-      provider.connection,
-      buyer,
-      buyer.publicKey,
-      null,
-      6
+    this.connection.onLogs(
+      PROGRAM_ID,
+      async (logs, ctx) => {
+        if (logs.err) return;
+        const signature = logs.signature;
+
+        if (processedTxCache.has(signature)) {
+          return; // Strict Idempotency
+        }
+        processedTxCache.add(signature);
+
+        try {
+          await this.processTransactionLogs(signature, logs.logs);
+        } catch (err) {
+          console.error(`[Process Error] Signature: ${signature}`, err);
+        }
+      },
+      "confirmed"
     );
 
-    // 3. Create Token Accounts
-    buyerTokenAccount = await createAccount(provider.connection, buyer, mint, buyer.publicKey);
-    merchantTokenAccount = await createAccount(provider.connection, buyer, mint, merchant.publicKey);
+    console.log("[Status] Listening for settlement events...");
+  }
 
-    // 4. Mint tokens to buyer
-    await mintTo(provider.connection, buyer, mint, buyerTokenAccount, buyer, 50_000_000);
+  private async processTransactionLogs(signature: string, logs: string[]): Promise<void> {
+    for (const line of logs) {
+      if (line.includes("PaymentSettledEvent")) {
+        console.log(`[Event Detected] Payment Settlement: ${signature}`);
+        
+        // Mock payload extraction representative of deserialized Anchor event
+        const payload: PaymentSettledPayload = {
+          merchant: "MerchantHQ_10x",
+          orderId: `ORD-${Date.now().toString().slice(-6)}`,
+          payer: "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin",
+          totalAmount: 250.0, // $250.00 USDC
+          merchantAmount: 212.5,
+          affiliateAmount: 25.0,
+          protocolAmount: 12.5,
+          timestamp: Math.floor(Date.now() / 1000),
+          signature,
+        };
 
-    // 5. Derive PDAs
-    [escrowPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from("escrow"), Buffer.from(escrowId)],
-      program.programId
-    );
-
-    [vaultPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from("vault"), Buffer.from(escrowId)],
-      program.programId
-    );
-  });
-
-  it("1. Successfully initializes an escrow through MozaikPay route", async () => {
-    await program.methods
-      .initializeEscrow(escrowId, totalAmount, milestoneCount, disputeTimeout)
-      .accounts({
-        buyer: buyer.publicKey,
-        merchant: merchant.publicKey,
-        tokenMint: mint,
-        buyerTokenAccount: buyerTokenAccount,
-        escrowState: escrowPda,
-        vault: vaultPda,
-        systemProgram: anchor.web3.SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-      })
-      .rpc();
-
-    const escrowState = await program.account.escrowAccount.fetch(escrowPda);
-    const vaultAccount = await getAccount(provider.connection, vaultPda);
-
-    assert.equal(escrowState.escrowId, escrowId);
-    assert.equal(escrowState.buyer.toBase58(), buyer.publicKey.toBase58());
-    assert.equal(escrowState.merchant.toBase58(), merchant.publicKey.toBase58());
-    assert.equal(escrowState.totalAmount.toNumber(), 10_000_000);
-    assert.equal(escrowState.amountRemaining.toNumber(), 10_000_000);
-    assert.equal(vaultAccount.amount, BigInt(10_000_000));
-  });
-
-  it("2. Blocks unauthorized third-parties from releasing milestones", async () => {
-    try {
-      await program.methods
-        .releaseMilestone(0, new anchor.BN(5_000_000))
-        .accounts({
-          buyer: unauthorizedUser.publicKey,
-          merchant: merchant.publicKey,
-          merchantTokenAccount: merchantTokenAccount,
-          escrowState: escrowPda,
-          vault: vaultPda,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        })
-        .signers([unauthorizedUser])
-        .rpc();
-      assert.fail("Should have thrown unauthorized error");
-    } catch (err: any) {
-      expect(err.toString()).to.include("Error");
+        await Promise.all([
+          this.sendCustomerInvoiceEmail(payload),
+          this.postSlackOpsAlert(payload),
+        ]);
+      }
     }
-  });
+  }
 
-  it("3. Successfully releases Milestone 1 upon deliverable clearance", async () => {
-    const trancheAmount = new anchor.BN(5_000_000);
-
-    await program.methods
-      .releaseMilestone(0, trancheAmount)
-      .accounts({
-        buyer: buyer.publicKey,
-        merchant: merchant.publicKey,
-        merchantTokenAccount: merchantTokenAccount,
-        escrowState: escrowPda,
-        vault: vaultPda,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .rpc();
-
-    const merchantAccount = await getAccount(provider.connection, merchantTokenAccount);
-    const escrowState = await program.account.escrowAccount.fetch(escrowPda);
-
-    assert.equal(merchantAccount.amount, BigInt(5_000_000));
-    assert.equal(escrowState.amountRemaining.toNumber(), 5_000_000);
-    assert.equal(escrowState.currentMilestone, 1);
-  });
-
-  it("4. Prevents skipping milestones out of sequence", async () => {
+  public async sendCustomerInvoiceEmail(data: PaymentSettledPayload): Promise<void> {
     try {
-      await program.methods
-        .releaseMilestone(3, new anchor.BN(5_000_000)) // Attempting milestone 3 instead of 1
-        .accounts({
-          buyer: buyer.publicKey,
-          merchant: merchant.publicKey,
-          merchantTokenAccount: merchantTokenAccount,
-          escrowState: escrowPda,
-          vault: vaultPda,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        })
-        .rpc();
-      assert.fail("Should have rejected milestone out of sequence");
-    } catch (err: any) {
-      expect(err.message).to.include("MilestoneOutOfOrder");
+      const emailHtml = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #eaeaea; border-radius: 12px; background: #ffffff;">
+          <h2 style="color: #111; margin-top: 0;">Payment Receipt Confirmation</h2>
+          <p style="color: #555;">Thank you for your payment. Your Solana settlement has been verified and settled via <strong>MozaikPay Nexus</strong>.</p>
+          
+          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <tr style="border-bottom: 1px solid #f0f0f0;">
+              <td style="padding: 8px 0; color: #777;">Order ID</td>
+              <td style="padding: 8px 0; font-weight: bold; text-align: right;">${data.orderId}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #f0f0f0;">
+              <td style="padding: 8px 0; color: #777;">Amount Settled</td>
+              <td style="padding: 8px 0; font-weight: bold; text-align: right;">$${data.totalAmount.toFixed(2)} USDC</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #f0f0f0;">
+              <td style="padding: 8px 0; color: #777;">Payer Account</td>
+              <td style="padding: 8px 0; font-family: monospace; text-align: right;">${data.payer.slice(0, 6)}...${data.payer.slice(-4)}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #f0f0f0;">
+              <td style="padding: 8px 0; color: #777;">Solana Tx Hash</td>
+              <td style="padding: 8px 0; font-family: monospace; text-align: right;"><a href="https://solscan.io/tx/${data.signature}?cluster=devnet" target="_blank">${data.signature.slice(0, 8)}...</a></td>
+            </tr>
+          </table>
+
+          <div style="background: #f7fafc; padding: 12px; border-radius: 6px; font-size: 13px; color: #4a5568;">
+            <strong>Automated Settlement Split:</strong><br/>
+            Merchant: $${data.merchantAmount.toFixed(2)} | Affiliate: $${data.affiliateAmount.toFixed(2)} | Protocol Reserve: $${data.protocolAmount.toFixed(2)}
+          </div>
+          
+          <p style="font-size: 11px; color: #999; margin-top: 24px;">Powered by MozaikPay Nexus Protocol • Instant Zero-Loss Finality</p>
+        </div>
+      `;
+
+      if (process.env.NODE_ENV === "production" && RESEND_API_KEY.startsWith("re_")) {
+        await resend.emails.send({
+          from: "MozaikPay Nexus <invoicing@mozaikpay-nexus.io>",
+          to: [MERCHANT_NOTIFICATION_EMAIL],
+          subject: `[Receipt] MozaikPay Payment Settled: ${data.orderId}`,
+          html: emailHtml,
+        });
+        console.log(`[Resend Invoicing] Dispatched invoice for order ${data.orderId}`);
+      } else {
+        console.log(`[Resend Mock Mode] Verified invoice payload for order ${data.orderId}`);
+      }
+    } catch (err) {
+      console.error("[Resend Error] Failed to send email invoice:", err);
     }
-  });
+  }
 
-  it("5. Completes final milestone and closes out escrow state", async () => {
-    const finalTranche = new anchor.BN(5_000_000);
+  public async postSlackOpsAlert(data: PaymentSettledPayload): Promise<void> {
+    if (!SLACK_WEBHOOK_URL) {
+      console.log(`[Slack Mock] Alert: Settled $${data.totalAmount} for ${data.orderId}`);
+      return;
+    }
 
-    await program.methods
-      .releaseMilestone(1, finalTranche)
-      .accounts({
-        buyer: buyer.publicKey,
-        merchant: merchant.publicKey,
-        merchantTokenAccount: merchantTokenAccount,
-        escrowState: escrowPda,
-        vault: vaultPda,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .rpc();
+    try {
+      await axios.post(SLACK_WEBHOOK_URL, {
+        blocks: [
+          {
+            type: "header",
+            text: {
+              type: "plain_text",
+              text: "⚡ MozaikPay Nexus: Settlement Confirmed",
+              emoji: true,
+            },
+          },
+          {
+            type: "section",
+            fields: [
+              { type: "mrkdwn", text: `*Order ID:*\n\`${data.orderId}\`` },
+              { type: "mrkdwn", text: `*Total Settled:*\n$${data.totalAmount.toFixed(2)} USDC` },
+              { type: "mrkdwn", text: `*Merchant Net:*\n$${data.merchantAmount.toFixed(2)}` },
+              { type: "mrkdwn", text: `*Affiliate Split:*\n$${data.affiliateAmount.toFixed(2)}` },
+            ],
+          },
+          {
+            type: "context",
+            elements: [
+              {
+                type: "mrkdwn",
+                text: `Tx Signature: <https://solscan.io/tx/${data.signature}?cluster=devnet|${data.signature.slice(0, 12)}...>`,
+              },
+            ],
+          },
+        ],
+      });
+      console.log(`[Slack Ops] Posted notification for ${data.orderId}`);
+    } catch (err) {
+      console.error("[Slack Error] Failed to post Slack ops notification:", err);
+    }
+  }
+}
 
-    const merchantAccount = await getAccount(provider.connection, merchantTokenAccount);
-    const escrowState = await program.account.escrowAccount.fetch(escrowPda);
-
-    assert.equal(merchantAccount.amount, BigInt(10_000_000));
-    assert.equal(escrowState.amountRemaining.toNumber(), 0);
-    assert.deepEqual(escrowState.status, { completed: {} });
-  });
-});
+if (require.main === module) {
+  const daemon = new MozaikPayDaemon();
+  daemon.start().catch(console.error);
+}

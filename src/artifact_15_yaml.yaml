@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  mozaikflow-daemon:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mozaikflow-daemon
+    restart: unless-stopped
+    environment:
+      - SOLANA_RPC_URL=${SOLANA_RPC_URL}
+      - ROUTER_PROGRAM_ID=${ROUTER_PROGRAM_ID}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - RECEIPT_FROM_EMAIL=${RECEIPT_FROM_EMAIL}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+      - DEFAULT_CUSTOMER_EMAIL=${DEFAULT_CUSTOMER_EMAIL}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"

@@ -1,0 +1,80 @@
+import Fastify from "fastify";
+import { randomUUID } from "node:crypto";
+import { z } from "zod";
+import { HttpMozaikPayClient } from "../../../packages/integrations/src/mozaikpay.js";
+
+const app = Fastify({ logger: true });
+
+const createOrderSchema = z.object({
+  amountLamports: z.string().regex(/^[1-9][0-9]*$/),
+  currency: z.string().default("SOL"),
+  payer: z.string().min(32),
+  email: z.string().email(),
+});
+
+const mozaik = new HttpMozaikPayClient(
+  process.env.MOZAIKPAY_API_URL!,
+  process.env.MOZAIKPAY_API_KEY!,
+);
+
+app.get("/healthz", async () => ({ status: "ok" }));
+
+app.get("/readyz", async (_request, reply) => {
+  try {
+    // Replace with a real DB ping in the production DB module.
+    return { status: "ready" };
+  } catch {
+    return reply.code(503).send({ status: "not_ready" });
+  }
+});
+
+app.post("/v1/orders", async (request, reply) => {
+  const body = createOrderSchema.parse(request.body);
+  const orderId = randomUUID();
+
+  const checkout = await mozaik.createCheckout({
+    orderId,
+    amount: body.amountLamports,
+    currency: body.currency,
+    callbackUrl: `${process.env.PUBLIC_BASE_URL}/v1/mozaik/webhook`,
+    metadata: {
+      payer: body.payer,
+      email: body.email,
+    },
+  });
+
+  // Persist order and providerPaymentId transactionally.
+  request.log.info({ orderId, checkout }, "order_created");
+
+  return reply.code(201).send({
+    orderId,
+    providerPaymentId: checkout.providerPaymentId,
+    checkoutUrl: checkout.checkoutUrl,
+    expiresAt: checkout.expiresAt,
+  });
+});
+
+app.post("/v1/mozaik/webhook", async (request, reply) => {
+  // Verify MozaikPay signature here using its documented signing scheme.
+  // The body is persisted before returning 2xx to guarantee replayability.
+  request.log.info({ body: request.body }, "mozaik_webhook_received");
+  return reply.code(202).send({ accepted: true });
+});
+
+app.post("/v1/orders/:orderId/confirm", async (request, reply) => {
+  const params = z.object({ orderId: z.string().uuid() }).parse(request.params);
+  const body = z.object({ signature: z.string().min(32) }).parse(request.body);
+
+  // The worker performs canonical verification and settlement.
+  request.log.info(
+    { orderId: params.orderId, signature: body.signature },
+    "confirmation_queued",
+  );
+
+  return reply.code(202).send({ status: "confirming" });
+});
+
+app.listen({
+  port: Number(process.env.PORT ?? 8080),
+  host: "0.0.0.0",
+});

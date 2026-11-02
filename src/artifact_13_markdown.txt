@@ -1,0 +1,21 @@
+🧵 1/3
+Enterprise checkout on Solana just leveled up! ⚡️
+
+We built MozaikFlow on top of @MozaikPay: an autonomous, non-custodial multi-split settlement engine that eliminates reconciliation debt forever.
+
+Instant token splits, zero custody risk, sub-400ms settlement. 🚀
+#Solana #DeFi #MozaikPay
+
+🧵 2/3
+Traditional merchant gateways charge 3% + take days to payout.
+
+MozaikFlow leverages @MozaikPay rails & custom Anchor PDAs to atomically split payments across merchants, affiliates, and protocol treasuries in a single instruction—while auto-dispatching Resend invoices & Slack ERP webhooks in real-time. 📦🧾
+
+🧵 3/3
+Turnkey, production-grade, and open-source:
+✅ Non-custodial SPL token atomic splits
+✅ Program Derived Accounts for immutable receipts
+✅ Turnkey Docker + Redis idempotency daemon
+✅ Full unit & integration test coverage
+
+Check out our submission repo & see the future of Web3 commerce! 🔥

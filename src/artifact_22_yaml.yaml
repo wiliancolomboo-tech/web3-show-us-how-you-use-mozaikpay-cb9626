@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  mozaikpay-sentinel:
+    build: .
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      - SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+      - SOLANA_WS_URL=wss://api.mainnet-beta.solana.com
+      - PROGRAM_ID=MozPay1111111111111111111111111111111111111
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - MERCHANT_NOTIFICATION_EMAIL=${MERCHANT_NOTIFICATION_EMAIL}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"

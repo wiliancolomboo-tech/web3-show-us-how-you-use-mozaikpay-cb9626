@@ -1,0 +1,32 @@
+flowchart TD
+    subgraph ClientLayer ["1. Customer / Point of Sale"]
+        A["Customer / Client App"] -->|"Requests Checkout"| B["MozaikPulse POS API"]
+        B -->|"Generates QR / Solana Pay URL"| C["Mobile Wallet Phantom / Solflare"]
+    end
+
+    subgraph MozaikContract ["2. Solana MozaikPay On-Chain Engine"]
+        C -->|"Signs & Submits settle_invoice Transaction"| D["Mozaik Enterprise Contract"]
+        D -->|"Validates Expiry & Nonce"| E{"State Verification"}
+        E -->|Expired / Invalid| F["Revert: TransactionAborted"]
+        E -->|Valid| G["Execute Atomic SPL Token Split"]
+        G -->|"Merchant BPS"| H["Merchant Token Account"]
+        G -->|"Tax Reserve BPS"| I["Tax Escrow Token Account"]
+        G -->|"Platform BPS"| J["Protocol Revenue Account"]
+        G -->|"Emit Event"| K["InvoiceSettledEvent"]
+    end
+
+    subgraph IngestionWorker ["3. Enterprise Telemetry & Sync Daemon"]
+        L["Solana RPC WebSocket Geyser / Commitment: Confirmed"] -.->|"Stream Log Events"| M["MozaikPulse Daemon Listener"]
+        K -.-> L
+        M -->|"Deduplicate via Redis ID Cache"| N{"Idempotency Gate"}
+        N -->|Duplicate| O["Acknowledge & Drop"]
+        N -->|New Event| P["Process Transaction Payload"]
+    end
+
+    subgraph EnterpriseDispatch ["4. External Enterprise Integration Adapters"]
+        P -->|"POST JSON Payload"| Q["Resend Transactional Email Engine"]
+        P -->|"POST Rich Block Message"| R["Corporate Slack / Discord Operations Channel"]
+        P -->|"Sign HMAC-SHA256 Hook"| S["Merchant Enterprise ERP / SAP / NetSuite"]
+        Q -->|"Deliver PDF Proof-of-Payment"| T["Customer Inbox"]
+        R -->|"Notify CFO / Treasury"| U["Treasury Ops Room"]
+    end

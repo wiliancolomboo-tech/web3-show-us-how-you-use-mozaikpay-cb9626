@@ -1,0 +1,18 @@
+[ Buyer Wallet (Phantom/Solflare) ]
+               │
+               │ 1. Signs MozaikPay Solana Payload
+               ▼
+[ Solana Validator / RPC Network (Mainnet-Beta / Devnet) ]
+               │
+               │ 2. Invokes MozaikFlow Core Engine Program
+               ▼
+[ MozaikFlow Program (State Accounts & Escrow Vaults) ]
+               │
+               │ 3. Emits PaymentSettledEvent (Order Ref, Payer, Splits)
+               ▼
+[ MozaikFlow Node.js Service Worker ]
+       │                               │
+       │ 4. Transaction Verification    │ 5. Audit Dispatch
+       ▼                               ▼
+[ Resend API Gateway ]        [ Enterprise Slack Webhook ]
+(Delivers PDF/HTML Receipt)    (Real-time settlement alerts)

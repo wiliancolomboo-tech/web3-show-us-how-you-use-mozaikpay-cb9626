@@ -1,0 +1,5 @@
+2/6 ⚙️ How it works:
+1️⃣ Users sign a bounded delegation ticket on-chain via @anchorlang PDAs
+2️⃣ MozaikFlow's keeper monitors recurring billing epochs
+3️⃣ @MozaikPay routes atomic splits: 85% merchant treasury, 10% liquidity reserve, 5% affiliate partners
+4️⃣ Real-time invoice delivery via @resend & Slack webhooks!

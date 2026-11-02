@@ -1,0 +1,8 @@
+How does it work?
+
+1️⃣ @MozaikPay checkout constructs a multi-token payload
+2️⃣ Our Anchor contract atomically routes funds:
+   • 85% Merchant Core Vault
+   • 10% Partner/Affiliate
+   • 5% Automated Reserve
+3️⃣ Solana Pay reference keys trigger instant, zero-poll webhook reconciliation.

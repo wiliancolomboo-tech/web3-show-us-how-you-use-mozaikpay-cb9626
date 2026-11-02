@@ -1,0 +1,13 @@
+# Solana Network Configuration
+SOLANA_RPC_URL=https://api.devnet.solana.com
+PROGRAM_ID=MzkF1ow111111111111111111111111111111111111
+
+# Resend Transactional Receipts
+RESEND_API_KEY=re_123456789abcdefghijklmnopqrstuvwxyz
+RESEND_FROM_EMAIL=billing@mozaikflow.io
+
+# Enterprise Operations Alerting
+SLACK_WEBHOOK_URL=https://api.example.com/webhooks/alerts/placeholder
+
+# Microservice Healthcheck Port
+PORT=8080

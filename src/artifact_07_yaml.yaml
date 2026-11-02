@@ -1,23 +1,25 @@
 version: '3.8'
 
 services:
-  mozaikflow-orchestrator:
+  mozaikflow-daemon:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: mozaikflow_worker
+    container_name: mozaikflow_payroll_worker
     restart: unless-stopped
     environment:
       - SOLANA_RPC_URL=https://api.devnet.solana.com
-      - SOLANA_WS_URL=wss://api.devnet.solana.com
-      - PROGRAM_ID=MzkPay1111111111111111111111111111111111111
+      - PROGRAM_ID=MzkF1ow111111111111111111111111111111111111
+      - KEEPER_KEYPAIR_PATH=/usr/src/app/keys/keeper.json
       - RESEND_API_KEY=${RESEND_API_KEY}
       - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
-      - MERCHANT_EMAIL=finance@enterprise.xyz
+      - POLL_INTERVAL_MS=30000
+    volumes:
+      - ./keys:/usr/src/app/keys:ro
     healthcheck:
-      test: ["CMD-SHELL", "node -e 'process.exit(0)'"]
+      test: ["CMD", "node", "-e", "console.log('Worker Active')"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
       retries: 3
     logging:
       driver: "json-file"

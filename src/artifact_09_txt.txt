@@ -1,0 +1,4 @@
+Accepting crypto at checkout is only step one. 
+For true enterprise adoption on @solana, merchants need sub-second multi-party revenue splits, automated customer invoicing, and zero duplicate dispatches.
+
+Introducing MozaikFlow: The Enterprise Orchestrator powered by @MozaikPay 🧵👇

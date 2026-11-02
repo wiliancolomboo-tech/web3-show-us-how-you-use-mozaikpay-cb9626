@@ -1,219 +1,185 @@
-import { Connection, PublicKey, Keypair, clusterApiUrl } from "@solana/web3.js";
+// src/orchestrator.ts
+import { Connection, Keypair, PublicKey, clusterApiUrl } from "@solana/web3.js";
 import { Program, AnchorProvider, Wallet, Idl, BN } from "@coral-xyz/anchor";
-import { getAssociatedTokenAddressSync } from "@solana/spl-token";
+import express, { Request, Response } from "express";
+import nacl from "tweetnacl";
 import axios from "axios";
+import { Resend } from "resend";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-// Environment Configuration Validation
-interface AppConfig {
-  solanaRpcUrl: string;
-  solanaWsUrl: string;
-  programId: string;
-  resendApiKey: string;
-  slackWebhookUrl: string;
-  merchantNotificationEmail: string;
-  payerKeypairSecret: string;
+// Environment bindings
+const PORT = process.env.PORT || 4000;
+const SOLANA_RPC = process.env.SOLANA_RPC_URL || clusterApiUrl("devnet");
+const RESEND_API_KEY = process.env.RESEND_API_KEY || "re_mock_api_key_test_123456";
+const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL || "https://api.example.com/webhooks/alerts/placeholder";
+const PROGRAM_ID = new PublicKey(process.env.PROGRAM_ID || "MoZaiKPAY1111111111111111111111111111111111");
+
+const resend = new Resend(RESEND_API_KEY);
+const app = express();
+app.use(express.json());
+
+// In-memory idempotency cache (Redis swap-ready)
+const processedSignatures = new Set<string>();
+
+export interface MozaikWebhookPayload {
+  invoiceId: string;
+  signature: string;
+  payer: string;
+  amount: number;
+  mint: string;
+  timestamp: number;
+  referenceKey: string;
 }
 
-const config: AppConfig = {
-  solanaRpcUrl: process.env.SOLANA_RPC_URL || clusterApiUrl("devnet"),
-  solanaWsUrl: process.env.SOLANA_WS_URL || "wss://api.devnet.solana.com",
-  programId: process.env.PROGRAM_ID || "MzkPay1111111111111111111111111111111111111",
-  resendApiKey: process.env.RESEND_API_KEY || "re_test_mock_key_12345",
-  slackWebhookUrl: process.env.SLACK_WEBHOOK_URL || "https://hooks.slack.com/services/MOCK/TOKEN",
-  merchantNotificationEmail: process.env.MERCHANT_EMAIL || "treasury@acmecorp.global",
-  payerKeypairSecret: process.env.PAYER_KEYPAIR_JSON || "[]",
-};
+/**
+ * Validates cryptographic signature authenticity from MozaikPay Engine
+ */
+export function verifyMozaikSignature(
+  payload: MozaikWebhookPayload,
+  rawSignatureHex: string,
+  merchantPublicKeyHex: string
+): boolean {
+  try {
+    const message = Buffer.from(
+      JSON.stringify({
+        invoiceId: payload.invoiceId,
+        signature: payload.signature,
+        payer: payload.payer,
+        amount: payload.amount,
+        referenceKey: payload.referenceKey,
+      })
+    );
+    const signature = Buffer.from(rawSignatureHex, "hex");
+    const pubKey = Buffer.from(merchantPublicKeyHex, "hex");
 
-// MozaikPay Dynamic Payment Link Generator
-export class MozaikPayAdapter {
-  private baseCheckoutUrl = "https://checkout.mozaikpay.com/pay";
-
-  public generateCheckoutSession(params: {
-    escrowId: string;
-    amountUSDC: number;
-    merchantPubkey: string;
-    callbackUrl: string;
-  }): { checkoutUrl: string; paymentReference: string } {
-    const paymentReference = `mzk_ref_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    const query = new URLSearchParams({
-      ref: paymentReference,
-      escrow_id: params.escrowId,
-      amount: params.amountUSDC.toFixed(2),
-      currency: "USDC",
-      merchant: params.merchantPubkey,
-      return_url: params.callbackUrl,
-    });
-
-    return {
-      checkoutUrl: `${this.baseCheckoutUrl}?${query.toString()}`,
-      paymentReference,
-    };
+    return nacl.sign.detached.verify(message, signature, pubKey);
+  } catch (err) {
+    console.error("Cryptographic signature verification failed:", err);
+    return false;
   }
 }
 
-// Enterprise Notification Service
-export class EnterpriseNotifier {
-  private resendKey: string;
-  private slackWebhook: string;
-
-  constructor(resendKey: string, slackWebhook: string) {
-    this.resendKey = resendKey;
-    this.slackWebhook = slackWebhook;
-  }
-
-  public async notifySlack(title: string, fields: Record<string, string>): Promise<void> {
-    const blocks = [
+/**
+ * Enterprise Slack Audit Dispatcher
+ */
+export async function notifySlackTreasury(payload: MozaikWebhookPayload): Promise<void> {
+  const slackBody = {
+    blocks: [
       {
         type: "header",
         text: {
           type: "plain_text",
-          text: `⚡ MozaikPay Settlement: ${title}`,
+          text: "🚀 MozaikPay Invoice Settled",
           emoji: true,
         },
       },
       {
         type: "section",
-        fields: Object.entries(fields).map(([k, v]) => ({
-          type: "mrkdwn",
-          text: `*${k}:*\n\`${v}\``,
-        })),
-      },
-      {
-        type: "context",
-        elements: [
-          {
-            type: "mrkdwn",
-            text: `*Network:* Solana Devnet/Mainnet | *Engine:* MozaikFlow Core`,
-          },
+        fields: [
+          { type: "mrkdwn", text: `*Invoice ID:*\n\`${payload.invoiceId}\`` },
+          { type: "mrkdwn", text: `*Amount Settled:*\n${payload.amount / 1e6} USDC` },
+          { type: "mrkdwn", text: `*Payer:*\n\`${payload.payer.slice(0, 4)}...${payload.payer.slice(-4)}\`` },
+          { type: "mrkdwn", text: `*Solana Tx:*\n<https://explorer.solana.com/tx/${payload.signature}?cluster=devnet|View Explorer>` },
         ],
       },
-    ];
+    ],
+  };
 
-    try {
-      if (this.slackWebhook.includes("hooks.slack.com")) {
-        await axios.post(this.slackWebhook, { blocks });
-        console.log(`[Slack] Successfully posted alert: ${title}`);
-      } else {
-        console.log(`[Slack Mock] Alert generated for: ${title}`);
-      }
-    } catch (err: any) {
-      console.error(`[Slack Error] Failed to send message: ${err.message}`);
-    }
+  try {
+    await axios.post(SLACK_WEBHOOK_URL, slackBody, { timeout: 5000 });
+  } catch (err: any) {
+    console.warn(`[Telemetry] Slack hook warning (simulated/offline): ${err.message}`);
   }
+}
 
-  public async sendEmailInvoice(
-    recipient: string,
-    escrowId: string,
-    amount: string,
-    txSignature: string
-  ): Promise<void> {
-    const emailPayload = {
-      from: "billing@mozaikflow.io",
-      to: [recipient],
-      subject: `[MozaikPay Receipt] Escrow Settlement: ${escrowId}`,
+/**
+ * Resend Email Receipt Delivery
+ */
+export async function sendEmailReceipt(
+  recipientEmail: string,
+  payload: MozaikWebhookPayload
+): Promise<void> {
+  try {
+    await resend.emails.send({
+      from: "MozaikFlow Billing <billing@mozaikpay.enterprise>",
+      to: recipientEmail,
+      subject: `[Settled] Payment Receipt - Invoice ${payload.invoiceId}`,
       html: `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; color: #1e293b;">
-          <h2 style="color: #4f46e5;">MozaikPay Settlement Confirmation</h2>
-          <p>An on-chain settlement has been confirmed via the MozaikFlow Engine.</p>
-          <table style="width: 100%; border-collapse: collapse; margin-top: 16px;">
-            <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 8px 0; font-weight: bold;">Escrow ID</td><td>${escrowId}</td></tr>
-            <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 8px 0; font-weight: bold;">Settled Amount</td><td>${amount} USDC</td></tr>
-            <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 8px 0; font-weight: bold;">Transaction Signature</td><td><code>${txSignature}</code></td></tr>
-          </table>
-          <p style="margin-top: 24px;">
-            <a href="https://solscan.io/tx/${txSignature}?cluster=devnet" style="background-color: #4f46e5; color: white; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold;">View on Explorer</a>
-          </p>
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <h2 style="color: #4f46e5;">MozaikPay Instant Settlement Confirmation</h2>
+          <p>Your payment has been atomically finalized on Solana.</p>
+          <hr style="border: 0; border-top: 1px solid #cbd5e1; margin: 16px 0;" />
+          <p><strong>Invoice ID:</strong> ${payload.invoiceId}</p>
+          <p><strong>Amount:</strong> $${(payload.amount / 1e6).toFixed(2)} USDC</p>
+          <p><strong>Transaction Signature:</strong></p>
+          <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto;">${payload.signature}</pre>
+          <p style="font-size: 12px; color: #64748b;">Powered by MozaikPay Protocol on Solana.</p>
         </div>
       `,
-    };
+    });
+    console.log(`[Email] Dispatch succeeded for Invoice ${payload.invoiceId} to ${recipientEmail}`);
+  } catch (err: any) {
+    console.warn(`[Email] Resend API Warning (simulated/fallback): ${err.message}`);
+  }
+}
 
-    try {
-      if (this.resendKey.startsWith("re_") && !this.resendKey.includes("mock")) {
-        await axios.post("https://api.resend.com/emails", emailPayload, {
-          headers: { Authorization: `Bearer ${this.resendKey}` },
-        });
-        console.log(`[Resend] Payment receipt dispatched to ${recipient}`);
-      } else {
-        console.log(`[Resend Mock] Email rendered for ${recipient} (Tx: ${txSignature})`);
-      }
-    } catch (err: any) {
-      console.error(`[Resend Error] Failed to send email: ${err.message}`);
+// -----------------------------------------------------------------------------
+// Webhook & Orchestration API Endpoints
+// -----------------------------------------------------------------------------
+
+app.post("/api/v1/mozaik-webhook", async (req: Request, res: Response) => {
+  const payload: MozaikWebhookPayload = req.body;
+  const signatureHeader = req.headers["x-mozaik-signature"] as string;
+  const merchantPubKey = req.headers["x-mozaik-merchant-key"] as string;
+
+  if (!payload || !payload.signature || !payload.invoiceId) {
+    return res.status(400).json({ error: "Invalid payload parameters" });
+  }
+
+  // Idempotency check
+  if (processedSignatures.has(payload.signature)) {
+    return res.status(200).json({ status: "already_processed", invoiceId: payload.invoiceId });
+  }
+
+  // Cryptographic signature validation (bypassed if test key is set to development)
+  if (merchantPubKey && signatureHeader && merchantPubKey !== "bypass_dev") {
+    const isValid = verifyMozaikSignature(payload, signatureHeader, merchantPubKey);
+    if (!isValid) {
+      return res.status(401).json({ error: "Cryptographic signature validation failed" });
     }
   }
-}
 
-// Background Agent Orchestrator
-export class MozaikFlowOrchestrator {
-  private connection: Connection;
-  private notifier: EnterpriseNotifier;
-  private programId: PublicKey;
+  // Mark processed
+  processedSignatures.add(payload.signature);
 
-  constructor() {
-    this.connection = new Connection(config.solanaRpcUrl, {
-      wsEndpoint: config.solanaWsUrl,
-      commitment: "confirmed",
-    });
-    this.notifier = new EnterpriseNotifier(config.resendApiKey, config.slackWebhookUrl);
-    this.programId = new PublicKey(config.programId);
-  }
+  // Parallel asynchronous event dispatching
+  Promise.all([
+    notifySlackTreasury(payload),
+    sendEmailReceipt("treasury-ops@enterprise-corp.com", payload),
+  ]).catch((err) => console.error("[Pipeline Error]", err));
 
-  public async startDaemon(): Promise<void> {
-    console.log("=====================================================");
-    console.log("  🚀 MOZAIKFLOW ENTERPRISE AGENT IS LIVE");
-    console.log(`  RPC: ${config.solanaRpcUrl}`);
-    console.log(`  Program ID: ${this.programId.toBase58()}`);
-    console.log("=====================================================");
+  return res.status(200).json({
+    status: "success",
+    settled: true,
+    invoiceId: payload.invoiceId,
+    tx: payload.signature,
+  });
+});
 
-    this.connection.onLogs(
-      this.programId,
-      async (logs, ctx) => {
-        if (logs.err) return;
+app.get("/healthz", (_req: Request, res: Response) => {
+  res.status(200).json({
+    status: "healthy",
+    uptime: process.uptime(),
+    activeSignatures: processedSignatures.size,
+  });
+});
 
-        for (const log of logs.logs) {
-          if (log.includes("EscrowFundedEvent")) {
-            await this.handleEscrowFunded(logs.signature);
-          } else if (log.includes("MilestoneReleasedEvent")) {
-            await this.handleMilestoneReleased(logs.signature);
-          }
-        }
-      },
-      "confirmed"
-    );
-  }
-
-  private async handleEscrowFunded(signature: string): Promise<void> {
-    console.log(`\n[EVENT DETECTED] EscrowFunded in Tx: ${signature}`);
-    await this.notifier.notifySlack("Escrow Vault Funded", {
-      Transaction: signature,
-      Status: "Locked in On-Chain PDA",
-      Gateway: "MozaikPay Smart Router",
-    });
-
-    await this.notifier.sendEmailInvoice(
-      config.merchantNotificationEmail,
-      "ESCROW-DEMO-01",
-      "5,000.00",
-      signature
-    );
-  }
-
-  private async handleMilestoneReleased(signature: string): Promise<void> {
-    console.log(`\n[EVENT DETECTED] MilestoneReleased in Tx: ${signature}`);
-    await this.notifier.notifySlack("Milestone Tranche Released", {
-      Transaction: signature,
-      Payout: "Settled to Merchant Wallet",
-    });
-  }
-}
-
-// CLI Execution Entrypoint
-if (require.main === module) {
-  const orchestrator = new MozaikFlowOrchestrator();
-  orchestrator.startDaemon().catch((err) => {
-    console.error("Fatal Daemon Failure:", err);
-    process.exit(1);
+if (process.env.NODE_ENV !== "test") {
+  app.listen(PORT, () => {
+    console.log(`⚡ MozaikFlow Enterprise Daemon online at port ${PORT}`);
   });
 }
+
+export default app;

@@ -1,0 +1,12 @@
+server/
+├── package.json
+├── tsconfig.json
+├── src/
+│   ├── config.ts
+│   ├── services/
+│   │   ├── emailService.ts
+│   │   ├── slackService.ts
+│   │   └── solanaListener.ts
+│   ├── utils/
+│   │   └── crypto.ts
+│   └── index.ts

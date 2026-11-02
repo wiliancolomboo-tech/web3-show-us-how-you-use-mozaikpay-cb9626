@@ -1,0 +1,16 @@
+# Solana Network Configuration
+SOLANA_NETWORK=mainnet-beta
+SOLANA_RPC_URL=https://rpc.helius.xyz/?api-key=YOUR_HELIUS_API_KEY
+SOLANA_WS_URL=wss://rpc.helius.xyz/?api-key=YOUR_HELIUS_API_KEY
+PROGRAM_ID=MzkFLow111111111111111111111111111111111111
+
+# Authority Keypair Path
+KEYPAIR_PATH=/app/keys/deployer.json
+
+# Enterprise Notification Credentials
+RESEND_API_KEY=re_enterprise_live_key_9918237
+SLACK_WEBHOOK_URL=https://api.example.com/webhooks/alerts/placeholder
+WEBHOOK_SECRET=mozaik_flow_hmac_secret_production_key_4432
+
+# Telemetry Port
+PORT=8080

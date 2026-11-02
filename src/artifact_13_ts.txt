@@ -1,0 +1,23 @@
+import crypto from "node:crypto";
+
+async function sendSignedMerchantWebhook(payload: unknown) {
+  const body = JSON.stringify(payload);
+  const signature = crypto
+    .createHmac("sha256", process.env.MERCHANT_WEBHOOK_SECRET!)
+    .update(body)
+    .digest("hex");
+
+  const response = await fetch(process.env.MERCHANT_WEBHOOK_URL!, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-mozaikpay-relay-signature": `sha256=${signature}`,
+      "x-mozaikpay-relay-version": "2025-01",
+    },
+    body,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Merchant webhook failed with status ${response.status}`);
+  }
+}

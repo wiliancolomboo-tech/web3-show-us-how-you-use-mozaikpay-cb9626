@@ -1,0 +1,7 @@
+PORT=3000
+SOLANA_NETWORK=devnet
+SOLANA_RPC_URL=https://api.devnet.solana.com
+PROGRAM_ID=MozkPaySett1ementEngine11111111111111111111111
+RESEND_API_KEY=re_1234567890abcdef
+MERCHANT_NOTIFICATION_EMAIL=finance@enterprise-merchant.com
+SLACK_WEBHOOK_URL=https://api.example.com/webhooks/alerts/placeholder

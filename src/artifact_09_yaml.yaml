@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  mozaikflow-daemon:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mozaikflow_daemon
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - SOLANA_RPC_URL=https://api.devnet.solana.com
+      - MOZAIK_API_KEY=mk_live_a1b2c3d4e5f6
+      - MOZAIK_WEBHOOK_SECRET=whsec_998877665544332211
+      - RESEND_API_KEY=re_live_enterprise_prod_key
+      - SLACK_WEBHOOK_URL=https://api.example.com/webhooks/alerts/placeholder
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

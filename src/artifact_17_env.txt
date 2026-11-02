@@ -1,0 +1,9 @@
+PORT=8080
+SOLANA_RPC_URL=https://api.devnet.solana.com
+MOZAIKPAY_API_KEY=mk_live_your_mozaik_api_key_here
+MOZAIKPAY_API_URL=https://api.mozaikpay.com/v1
+MOZAIKPAY_WEBHOOK_SECRET=your_32_char_webhook_signing_secret
+RESEND_API_KEY=re_your_resend_api_key_here
+RESEND_SENDER_EMAIL=receipts@yourdomain.com
+SLACK_WEBHOOK_URL=https://api.example.com/webhooks/alerts/placeholder
+MOZAIKPAY_MOCK_FALLBACK=false

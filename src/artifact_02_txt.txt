@@ -1,0 +1,31 @@
++-------------------------------------------------------------------------------------------------+
+|                                 MOZAIK PAYMENT ECOSYSTEM                                        |
+|                                                                                                 |
+|   +--------------------------+          RPC Pool (Helius / Triton / QuickNode)                  |
+|   |   Customer Browser /     |                     ^                                            |
+|   |   SaaS Terminal          |                     |                                            |
+|   +------------+-------------+                     v                                            |
+|                |                   +----------------------------------+                         |
+|                | Solana Pay URL    |    MozaikPay Nexus Program       |                         |
+|                | or Web3 Signature |    (Anchor Engine on Solana)     |                         |
+|                v                   |  - Merchant Registry PDA         |                         |
+|   +--------------------------+     |  - Subscription Authority PDA    |                         |
+|   |  MozaikPay Client SDK    +---->|  - Deterministic Split Engine    |                         |
+|   +--------------------------+     +-----------------+----------------+                         |
+|                                                      |                                          |
+|                                                      | WebSocket Subscription Logs              |
+|                                                      v                                          |
+|                                    +----------------------------------+                         |
+|                                    |  MozaikPay Daemon & Ingest Node  |                         |
+|                                    |  - Fastify Ingest Server         |                         |
+|                                    |  - Idempotent Queue Worker       |                         |
+|                                    +-----------------+----------------+                         |
+|                                                      |                                          |
+|                               +----------------------+----------------------+                   |
+|                               |                                             |                   |
+|                               v                                             v                   |
+|                    +---------------------+                       +---------------------+        |
+|                    |     Resend API      |                       |    Slack Webhooks   |        |
+|                    | (Automated Invoices)|                       |  (Executive Alerts) |        |
+|                    +---------------------+                       +---------------------+        |
++-------------------------------------------------------------------------------------------------+

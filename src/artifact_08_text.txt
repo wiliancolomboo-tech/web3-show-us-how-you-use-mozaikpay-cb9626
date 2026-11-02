@@ -1,0 +1,12 @@
+PASS  tests/mozaik_vault.test.ts
+  MozaikVault Enterprise Engine Test Suite
+    ✓ 1. Successfully dispatches receipt via Resend and alert to Slack (28 ms)
+    ✓ 2. Idempotency Guard: Rejects duplicate transaction signatures (4 ms)
+    ✓ 3. Graceful degradation when external services time out (5 ms)
+    ✓ 4. Mathematical invariant check: Split components sum to total (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       4 passed, 4 total
+Snapshots:   0 total
+Time:        1.428 s
+Ran all test suites.

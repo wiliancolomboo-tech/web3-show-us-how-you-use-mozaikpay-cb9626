@@ -1,0 +1,21 @@
+type Delivery = {
+  id: string;
+  orderId: string;
+  kind: "email" | "slack" | "merchant_webhook";
+  attempts: number;
+  nextAttemptAt: Date;
+};
+
+async function deliver(delivery: Delivery, payload: unknown): Promise<void> {
+  switch (delivery.kind) {
+    case "email":
+      await sendResend(payload);
+      break;
+    case "slack":
+      await sendSlack(payload);
+      break;
+    case "merchant_webhook":
+      await sendSignedMerchantWebhook(payload);
+      break;
+  }
+}

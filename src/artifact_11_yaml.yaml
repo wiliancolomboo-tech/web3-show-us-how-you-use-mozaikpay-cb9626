@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  mozaik-sentinel-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mozaik-sentinel-gateway
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - SOLANA_RPC_URL=https://api.devnet.solana.com
+      - RESEND_API_KEY=${RESEND_API_KEY:-re_simulated_key}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-https://api.example.com/webhooks/alerts/placeholder
+      - MERCHANT_VAULT=4Nd1mBQtrMK8u5Wv1Y3vU3rN6oFm9k2P1y5uN9qL4bZ1
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3

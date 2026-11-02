@@ -1,0 +1,1 @@
+yarn cli audit-settlements --from-slot <START_SLOT>

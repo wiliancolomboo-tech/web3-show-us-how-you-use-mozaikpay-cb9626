@@ -1,0 +1,27 @@
+async function sendResend(payload: {
+  email: string;
+  orderId: string;
+  amount: string;
+}) {
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      from: process.env.RESEND_FROM,
+      to: payload.email,
+      subject: `Payment confirmed: ${payload.orderId}`,
+      html: `
+        <h1>Payment confirmed</h1>
+        <p>Order: ${payload.orderId}</p>
+        <p>Amount: ${payload.amount} lamports</p>
+      `,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Resend failed with status ${response.status}`);
+  }
+}

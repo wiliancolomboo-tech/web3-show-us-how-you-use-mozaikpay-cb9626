@@ -1,0 +1,8 @@
+relay_orders_created_total
+relay_orders_settled_total
+relay_orders_rejected_total
+relay_order_confirmation_latency_seconds
+relay_delivery_attempts_total{kind,status}
+relay_rpc_errors_total
+relay_mozaikpay_errors_total
+relay_outbox_depth

@@ -1,0 +1,16 @@
+async function sendSlack(payload: {
+  orderId: string;
+  signature: string;
+}) {
+  const response = await fetch(process.env.SLACK_WEBHOOK_URL!, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      text: `✅ Solana payment settled\nOrder: ${payload.orderId}\nTx: ${payload.signature}`,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Slack webhook failed with status ${response.status}`);
+  }
+}

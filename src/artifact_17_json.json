@@ -1,0 +1,10 @@
+{
+  "success": true,
+  "order_id": "ord_mozaik_alpha",
+  "settlement_tx": "5wHu8xK...",
+  "splits": {
+    "affiliate": 15000000,
+    "tax": 10000000,
+    "merchant": 75000000
+  }
+}

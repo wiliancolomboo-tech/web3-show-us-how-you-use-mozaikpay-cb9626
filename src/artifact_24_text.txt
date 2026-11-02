@@ -1,0 +1,17 @@
+1/4 🧵 Traditional crypto payments break down when enterprise businesses scale: manual invoice tracking, double-spends, and complex payout splits.
+
+We built the MozaikPay Enterprise Rails on @solana — an autonomous multi-party settlement engine with zero custodial risk. ⚡💳
+
+2/4 Built on @AnchorLang, MozaikPay splits revenue atomically in a single Solana slot:
+✅ 97.5% directly to Merchant
+✅ 2.0% instant Affiliate/Partner cut
+✅ 0.5% Protocol fee
+No escrow lockups. Deterministic PDAs. Sub-second finality. 🛡️
+
+3/4 Connected to our off-chain Sentinel engine:
+📡 Real-time WebSocket signature verification
+📧 Instant transactional receipts powered by @resend
+🚨 Immediate Discord/Slack operations alerts
+A complete turnkey Web2 ➡️ Web3 bridge.
+
+4/4 Check out the open-source architecture, automated CLI, and 100% test-backed suite in our bounty submission! Built for modern merchants on @MozaikPay 🚀

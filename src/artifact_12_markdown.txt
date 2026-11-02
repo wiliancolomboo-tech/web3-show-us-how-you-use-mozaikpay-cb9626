@@ -1,0 +1,4 @@
+### Verification Checklist for MozaikPay Hackathon Evaluators
+1. **Liveness Probe**: Run `curl -i http://localhost:8080/healthz`. Expected response: `{"status":"ok","service":"stream-mozaik-daemon","redis":"healthy",...}` with HTTP 200.
+2. **Replay Protection Test**: Post duplicate events using identical `sessionId` fields; observe second response status `"already_processed"`.
+3. **Anchor Escrow Verification**: Run `anchor test` to run all 5 unit & integration tests on a local validator.

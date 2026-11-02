@@ -1,0 +1,5 @@
+1/4 How do you turn @MozaikPay into an institutional checkout beast? 
+
+We built the Mozaik Enterprise Gateway: an open-source Solana Anchor architecture combining sub-second payments with deterministic, non-custodial tripartite revenue splits (Merchant + Tax Vault + Affiliate). 
+
+Zero custodial risk. 100% on-chain.

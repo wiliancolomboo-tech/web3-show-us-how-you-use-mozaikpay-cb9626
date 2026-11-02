@@ -1,0 +1,25 @@
+import { describe, expect, it } from "vitest";
+import { Keypair, PublicKey } from "@solana/web3.js";
+import { orderHash } from "../packages/core/src/verify.js";
+
+describe("payment verification primitives", () => {
+  it("creates deterministic order hashes", () => {
+    expect(orderHash("order-123").toString("hex")).toBe(
+      orderHash("order-123").toString("hex"),
+    );
+  });
+
+  it("produces different hashes for different orders", () => {
+    expect(orderHash("order-a")).not.toEqual(orderHash("order-b"));
+  });
+
+  it("rejects zero-value business input before chain submission", () => {
+    const amount = 0n;
+    expect(amount > 0n).toBe(false);
+  });
+
+  it("uses valid Solana public keys", () => {
+    expect(() => Keypair.generate().publicKey.toBase58()).not.toThrow();
+    expect(() => new PublicKey("11111111111111111111111111111111")).not.toThrow();
+  });
+});

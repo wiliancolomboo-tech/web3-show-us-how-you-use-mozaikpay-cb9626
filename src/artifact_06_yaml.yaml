@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  mozaikflow-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mozaikflow-core
+    restart: always
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - NODE_ENV=production
+      - SOLANA_RPC_URL=https://api.devnet.solana.com
+      - PROGRAM_ID=MoZaiKPAY1111111111111111111111111111111111
+      - RESEND_API_KEY=${RESEND_API_KEY:-re_live_default_key}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-https://api.example.com/webhooks/alerts/placeholder
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"

@@ -1,0 +1,6 @@
+Attempt 1: immediate
+Attempt 2: 30 seconds
+Attempt 3: 2 minutes
+Attempt 4: 10 minutes
+Attempt 5: 1 hour
+After attempt 5: MANUAL_REVIEW

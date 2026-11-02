@@ -1,0 +1,5 @@
+1/3 🚀 Web3 payments shouldn't feel like guessing if a transaction cleared. Today, we're unveiling MozaikPay Enterprise: an autonomous, trustless B2B micro-settlement gateway built on @Solana and powered by @MozaikPay! 💳⚡
+
+2/3 🔐 With single-use deterministic PDAs, automatic 98/2 treasury/protocol splits, zero replay risk, and turnkey enterprise webhooks via @resend and Slack, merchants can invoice, settle, and automate financial audits in under 400ms!
+
+3/3 📦 100% open-source, complete with an Anchor smart contract, high-throughput microservice, Docker compose stack, and full test matrix. Check out our GitHub submission and take your Solana payments to enterprise grade! 🌐🛠️ #Solana #MozaikPay #Web3Payments

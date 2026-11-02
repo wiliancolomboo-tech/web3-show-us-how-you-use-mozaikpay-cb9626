@@ -1,0 +1,10 @@
++-----------------------------------------------------------------------------------------------+
+|                               OPERATIONAL RUNBOOK & ALERT MATRIX                              |
++----------------------+---------------------------+--------------------------------------------+
+| Metric / Condition   | Threshold                 | Remediation Protocol                       |
++----------------------+---------------------------+--------------------------------------------+
+| Webhook Auth Failure | > 5 attempts / min        | Trigger Cloudflare IP throttle on `/api/*` |
+| Solana Audit Timeout | > 3 consecutive failures  | Rotate RPC endpoint to backup fallback RPC |
+| Redis Ingress Stall  | Memory > 85%              | Evict stale keys: run `MEMORY PURGE`       |
+| HTTP Error Rate      | 5xx > 1% over 5-minute avg| Check Resend / Slack upstream rate-limits  |
++----------------------+---------------------------+--------------------------------------------+
