@@ -1,14 +1,14 @@
 # MozaikPay API Credentials
 MOZAIK_API_URL=https://api.mozaikpay.com
-MOZAIK_API_KEY=mzk_live_920f38b8120ef771029ab091
-MOZAIK_WEBHOOK_SECRET=whsec_982bf791024e5883204910cf
+MOZAIK_API_KEY=mzk_live_dummy_sample_api_key
+MOZAIK_WEBHOOK_SECRET=whsec_dummy_sample_webhook_secret
 
 # Solana Cluster Configuration
 SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
 SOLANA_PROGRAM_ID=MzkFLow111111111111111111111111111111111111
 
 # Enterprise Notifications
-RESEND_API_KEY=re_123456789_abcdefg
+RESEND_API_KEY=re_dummy_sample_key_placeholder
 SLACK_WEBHOOK_URL=https://api.example.com/webhooks/alerts/placeholder
 
 # Runtime

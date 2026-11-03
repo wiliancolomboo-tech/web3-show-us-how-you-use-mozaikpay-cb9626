@@ -648,7 +648,7 @@ dotenv.config();
 // Configuration
 const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com";
 const PROGRAM_ID = new PublicKey(process.env.PROGRAM_ID || "MoZaiKPAYNexus11111111111111111111111111111");
-const RESEND_API_KEY = process.env.RESEND_API_KEY || "re_test_mock_key_123456";
+const RESEND_API_KEY = process.env.RESEND_API_KEY || "re_dummy_sample_key_placeholder";
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL || "";
 const MERCHANT_NOTIFICATION_EMAIL = process.env.MERCHANT_NOTIFICATION_EMAIL || "billing@enterprise.com";
 

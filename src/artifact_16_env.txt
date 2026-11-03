@@ -4,7 +4,7 @@ PROGRAM_ID=MzkF1owEnterprise1111111111111111111111111111
 KEYPAIR_PATH=./secrets/id.json
 
 # Enterprise Integration Credentials
-RESEND_API_KEY=re_123456789_enterprise_token
+RESEND_API_KEY=re_dummy_sample_key_placeholder
 SLACK_WEBHOOK_URL=https://api.example.com/webhooks/alerts/placeholder
 CONTRACTOR_NOTIFY_EMAIL=accounting@acme-corp.com
 PORT=8080

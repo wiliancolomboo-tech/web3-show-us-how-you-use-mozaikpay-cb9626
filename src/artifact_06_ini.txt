@@ -8,9 +8,9 @@ PROGRAM_ID=MzkFLow111111111111111111111111111111111111
 KEYPAIR_PATH=/app/keys/deployer.json
 
 # Enterprise Notification Credentials
-RESEND_API_KEY=re_enterprise_live_key_9918237
+RESEND_API_KEY=re_dummy_sample_key_placeholder
 SLACK_WEBHOOK_URL=https://api.example.com/webhooks/alerts/placeholder
-WEBHOOK_SECRET=mozaik_flow_hmac_secret_production_key_4432
+WEBHOOK_SECRET=your_mozaik_hmac_secret_here
 
 # Telemetry Port
 PORT=8080

@@ -32,7 +32,7 @@ describe('MozaikEngine Enterprise QA Suite', () => {
       customerPubkey: 'DemoCustomer1111111111111111111111111111111',
       invoiceIdHex: 'e3b0c44298fc1c149afbf4c8996fb924',
       amountUsdc: 99.00,
-      signature: '5K2bW78MhVwUjH9J1R8uFkS3vL3mQ4xY1zP0aB2cD4eF6gH8iJ0kL2mN4oP6qR8s',
+      signature: '1111111111111111111111111111111111111111111111111111111111111111',
       timestamp: new Date().toISOString()
     });
 

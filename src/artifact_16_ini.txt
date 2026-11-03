@@ -3,7 +3,7 @@ SOLANA_RPC_URL=https://api.devnet.solana.com
 PROGRAM_ID=MozPay1111111111111111111111111111111111111
 
 # Enterprise Email Integration (Resend)
-RESEND_API_KEY=re_123456789_abcdefghijklmnopqrstuvwxyz
+RESEND_API_KEY=re_dummy_sample_key_placeholder
 SENDER_EMAIL=billing@yourdomain.com
 
 # Operations Webhook Integration (Discord / Slack)

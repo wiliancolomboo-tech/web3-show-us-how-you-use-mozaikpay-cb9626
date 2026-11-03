@@ -12,7 +12,7 @@ services:
     environment:
       - PORT=3000
       - SOLANA_RPC_URL=https://api.devnet.solana.com
-      - RESEND_API_KEY=${RESEND_API_KEY:-re_simulated_key}
+      - RESEND_API_KEY=${RESEND_API_KEY:-re_dummy_sample_key_placeholder}
       - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-https://api.example.com/webhooks/alerts/placeholder
       - MERCHANT_VAULT=4Nd1mBQtrMK8u5Wv1Y3vU3rN6oFm9k2P1y5uN9qL4bZ1
     healthcheck:

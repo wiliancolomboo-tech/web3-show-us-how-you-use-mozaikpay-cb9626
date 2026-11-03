@@ -4,7 +4,7 @@ SOLANA_WS_URL=wss://api.devnet.solana.com
 PROGRAM_ID=MoZaiKPAY1111111111111111111111111111111111
 
 # Enterprise Resend API
-RESEND_API_KEY=re_123456789_abcdefghijklmnopqrstuvwxyz
+RESEND_API_KEY=re_dummy_sample_key_placeholder
 RESEND_SENDER_EMAIL=invoicing@yourbusiness.com
 TEST_RECEIPT_EMAIL=ops@yourbusiness.com
 

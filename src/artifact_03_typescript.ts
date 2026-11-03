@@ -12,7 +12,7 @@ dotenv.config();
 // Environment bindings
 const PORT = process.env.PORT || 4000;
 const SOLANA_RPC = process.env.SOLANA_RPC_URL || clusterApiUrl("devnet");
-const RESEND_API_KEY = process.env.RESEND_API_KEY || "re_mock_api_key_test_123456";
+const RESEND_API_KEY = process.env.RESEND_API_KEY || "re_dummy_sample_key_placeholder";
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL || "https://api.example.com/webhooks/alerts/placeholder";
 const PROGRAM_ID = new PublicKey(process.env.PROGRAM_ID || "MoZaiKPAY1111111111111111111111111111111111");
 

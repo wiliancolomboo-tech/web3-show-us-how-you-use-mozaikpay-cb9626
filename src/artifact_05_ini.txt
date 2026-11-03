@@ -7,7 +7,7 @@ MOZAIKPAY_PROGRAM_ID=MoZkPay111111111111111111111111111111111111
 MERCHANT_PRIVATE_KEY=[12,45,231,100,56,...]
 
 # Enterprise Notifications
-RESEND_API_KEY=re_live_98ab76cd54ef32ba
+RESEND_API_KEY=re_dummy_sample_key_placeholder
 RECEIPT_FROM_EMAIL=receipts@enterprise.mozaikflow.io
 SLACK_WEBHOOK_URL=https://api.example.com/webhooks/alerts/placeholder
 

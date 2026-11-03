@@ -14,7 +14,7 @@ services:
       - NODE_ENV=production
       - SOLANA_RPC_URL=https://api.devnet.solana.com
       - PROGRAM_ID=MoZaiKPAY1111111111111111111111111111111111
-      - RESEND_API_KEY=${RESEND_API_KEY:-re_live_default_key}
+      - RESEND_API_KEY=${RESEND_API_KEY:-re_dummy_sample_key_placeholder}
       - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-https://api.example.com/webhooks/alerts/placeholder
     logging:
       driver: "json-file"

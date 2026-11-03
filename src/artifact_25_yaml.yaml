@@ -14,7 +14,7 @@ services:
       - SOLANA_RPC_URL=https://api.devnet.solana.com
       - SOLANA_WS_URL=wss://api.devnet.solana.com
       - PROGRAM_ID=MoZ1kPayEngine111111111111111111111111111111
-      - RESEND_API_KEY=${RESEND_API_KEY:-re_mock_test_key_12345}
+      - RESEND_API_KEY=${RESEND_API_KEY:-re_dummy_sample_key_placeholder}
       - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
       - APP_ENV=production
     healthcheck:

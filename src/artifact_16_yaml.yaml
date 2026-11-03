@@ -24,8 +24,8 @@ services:
       - REDIS_HOST=mozaik-redis
       - REDIS_PORT=6379
       - SOLANA_RPC_URL=https://api.devnet.solana.com
-      - MOZAIKPAY_WEBHOOK_SECRET=7f884f3e5b7a1c938d2105432abc
-      - RESEND_API_KEY=re_live_mozaik_demo
+      - MOZAIKPAY_WEBHOOK_SECRET=0000000000000000000000000000
+      - RESEND_API_KEY=re_dummy_sample_key_placeholder
       - SENDER_EMAIL=receipts@mozaikpay.io
       - SLACK_WEBHOOK_URL=https://api.example.com/webhooks/alerts/placeholder
     depends_on:
