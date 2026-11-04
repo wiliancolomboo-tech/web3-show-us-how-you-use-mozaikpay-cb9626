@@ -1,23 +1,24 @@
-version: '3.8'
+# docker-compose.yml
+version: "3.8"
 
 services:
-  mozaikflow-agent:
+  flowguard-daemon:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: mozaikflow-core
+    container_name: mozaikpay-flowguard-engine
     restart: always
-    ports:
-      - "4000:4000"
     environment:
-      - PORT=4000
       - NODE_ENV=production
-      - SOLANA_RPC_URL=https://api.devnet.solana.com
-      - PROGRAM_ID=MoZaiKPAY1111111111111111111111111111111111
-      - RESEND_API_KEY=${RESEND_API_KEY:-re_dummy_sample_key_placeholder}
-      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-https://api.example.com/webhooks/alerts/placeholder
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "20m"
-        max-file: "5"
+      - SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+      - PROGRAM_ID=MzkPayFLowGuard11111111111111111111111111111
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+      - PORT=8080
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3

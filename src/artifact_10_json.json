@@ -1,6 +1,14 @@
 {
-  "status": "ok",
-  "service": "mozaikpay-enterprise-gateway",
-  "solanaNodeVersion": "1.18.23",
-  "timestamp": "2024-11-20T12:00:00.000Z"
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src/**/*"]
 }

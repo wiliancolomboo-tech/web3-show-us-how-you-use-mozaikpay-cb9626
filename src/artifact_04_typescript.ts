@@ -1,195 +1,175 @@
-import { Connection, PublicKey } from "@solana/web3.js";
-import { Program, AnchorProvider, Idl } from "@coral-xyz/anchor";
-import { Resend } from "resend";
+import { Connection, PublicKey, Keypair } from "@solana/web3.js";
 import axios from "axios";
 import * as dotenv from "dotenv";
 
 dotenv.config();
 
-// Configuration
-const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com";
-const PROGRAM_ID = new PublicKey(process.env.PROGRAM_ID || "MoZaiKPAYNexus11111111111111111111111111111");
-const RESEND_API_KEY = process.env.RESEND_API_KEY || "re_dummy_sample_key_placeholder";
-const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL || "";
-const MERCHANT_NOTIFICATION_EMAIL = process.env.MERCHANT_NOTIFICATION_EMAIL || "billing@enterprise.com";
-
-const resend = new Resend(RESEND_API_KEY);
-const processedTxCache = new Set<string>();
-
-interface PaymentSettledPayload {
-  merchant: string;
-  orderId: string;
+export interface SplitPaymentEventData {
+  orderIdHex: string;
   payer: string;
-  totalAmount: number;
+  merchantConfig: string;
+  grossAmount: number;
   merchantAmount: number;
-  affiliateAmount: number;
-  protocolAmount: number;
+  platformFee: number;
+  taxAmount: number;
   timestamp: number;
   signature: string;
 }
 
-export class MozaikPayDaemon {
+export class MozaikFlowEnterpriseOrchestrator {
   private connection: Connection;
+  private resendApiKey: string;
+  private slackWebhookUrl: string;
+  private processedSignatures: Set<string>;
 
   constructor() {
-    this.connection = new Connection(SOLANA_RPC_URL, {
-      commitment: "confirmed",
-      wsEndpoint: SOLANA_RPC_URL.replace("https://", "wss://").replace("http://", "ws://"),
-    });
+    const rpcUrl = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com";
+    this.connection = new Connection(rpcUrl, "confirmed");
+    this.resendApiKey = process.env.RESEND_API_KEY || "";
+    this.slackWebhookUrl = process.env.SLACK_WEBHOOK_URL || "";
+    this.processedSignatures = new Set<string>();
   }
 
-  public async start(): Promise<void> {
-    console.log("=====================================================");
-    console.log("[MozaikPay Nexus] Enterprise Daemon Starting...");
-    console.log(`[Target Network]: ${SOLANA_RPC_URL}`);
-    console.log(`[Nexus Program ID]: ${PROGRAM_ID.toBase58()}`);
-    console.log("=====================================================");
-
-    this.connection.onLogs(
-      PROGRAM_ID,
-      async (logs, ctx) => {
-        if (logs.err) return;
-        const signature = logs.signature;
-
-        if (processedTxCache.has(signature)) {
-          return; // Strict Idempotency
-        }
-        processedTxCache.add(signature);
-
-        try {
-          await this.processTransactionLogs(signature, logs.logs);
-        } catch (err) {
-          console.error(`[Process Error] Signature: ${signature}`, err);
-        }
-      },
-      "confirmed"
-    );
-
-    console.log("[Status] Listening for settlement events...");
-  }
-
-  private async processTransactionLogs(signature: string, logs: string[]): Promise<void> {
-    for (const line of logs) {
-      if (line.includes("PaymentSettledEvent")) {
-        console.log(`[Event Detected] Payment Settlement: ${signature}`);
-        
-        // Mock payload extraction representative of deserialized Anchor event
-        const payload: PaymentSettledPayload = {
-          merchant: "MerchantHQ_10x",
-          orderId: `ORD-${Date.now().toString().slice(-6)}`,
-          payer: "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin",
-          totalAmount: 250.0, // $250.00 USDC
-          merchantAmount: 212.5,
-          affiliateAmount: 25.0,
-          protocolAmount: 12.5,
-          timestamp: Math.floor(Date.now() / 1000),
-          signature,
-        };
-
-        await Promise.all([
-          this.sendCustomerInvoiceEmail(payload),
-          this.postSlackOpsAlert(payload),
-        ]);
-      }
+  /**
+   * Dispatches branded customer receipts via Resend API
+   */
+  public async sendCustomerReceipt(
+    recipientEmail: string,
+    event: SplitPaymentEventData
+  ): Promise<boolean> {
+    if (!this.resendApiKey) {
+      console.warn("[WARN] RESEND_API_KEY not configured. Skipping receipt email.");
+      return false;
     }
-  }
 
-  public async sendCustomerInvoiceEmail(data: PaymentSettledPayload): Promise<void> {
-    try {
-      const emailHtml = `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #eaeaea; border-radius: 12px; background: #ffffff;">
-          <h2 style="color: #111; margin-top: 0;">Payment Receipt Confirmation</h2>
-          <p style="color: #555;">Thank you for your payment. Your Solana settlement has been verified and settled via <strong>MozaikPay Nexus</strong>.</p>
-          
-          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-            <tr style="border-bottom: 1px solid #f0f0f0;">
-              <td style="padding: 8px 0; color: #777;">Order ID</td>
-              <td style="padding: 8px 0; font-weight: bold; text-align: right;">${data.orderId}</td>
-            </tr>
-            <tr style="border-bottom: 1px solid #f0f0f0;">
-              <td style="padding: 8px 0; color: #777;">Amount Settled</td>
-              <td style="padding: 8px 0; font-weight: bold; text-align: right;">$${data.totalAmount.toFixed(2)} USDC</td>
-            </tr>
-            <tr style="border-bottom: 1px solid #f0f0f0;">
-              <td style="padding: 8px 0; color: #777;">Payer Account</td>
-              <td style="padding: 8px 0; font-family: monospace; text-align: right;">${data.payer.slice(0, 6)}...${data.payer.slice(-4)}</td>
-            </tr>
-            <tr style="border-bottom: 1px solid #f0f0f0;">
-              <td style="padding: 8px 0; color: #777;">Solana Tx Hash</td>
-              <td style="padding: 8px 0; font-family: monospace; text-align: right;"><a href="https://solscan.io/tx/${data.signature}?cluster=devnet" target="_blank">${data.signature.slice(0, 8)}...</a></td>
-            </tr>
+    const payload = {
+      from: "MozaikFlow Billing <billing@mozaikflow.io>",
+      to: [recipientEmail],
+      subject: `Payment Confirmed: Order #${event.orderIdHex.slice(0, 10)}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <h2 style="color: #0f172a;">MozaikPay Settlement Receipt</h2>
+          <p>Thank you for your purchase. Your transaction was atomically settled on Solana.</p>
+          <hr style="border: none; border-top: 1px solid #e2e8f0;" />
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr><td><strong>Order ID:</strong></td><td><code>${event.orderIdHex}</code></td></tr>
+            <tr><td><strong>Gross Paid:</strong></td><td>$${(event.grossAmount / 1e6).toFixed(2)} USDC</td></tr>
+            <tr><td><strong>Payer:</strong></td><td><code>${event.payer}</code></td></tr>
+            <tr><td><strong>Settled At:</strong></td><td>${new Date(event.timestamp * 1000).toUTCString()}</td></tr>
+            <tr><td><strong>Solana Signature:</strong></td><td><a href="https://solscan.io/tx/${event.signature}?cluster=devnet" target="_blank">View on Solscan</a></td></tr>
           </table>
-
-          <div style="background: #f7fafc; padding: 12px; border-radius: 6px; font-size: 13px; color: #4a5568;">
-            <strong>Automated Settlement Split:</strong><br/>
-            Merchant: $${data.merchantAmount.toFixed(2)} | Affiliate: $${data.affiliateAmount.toFixed(2)} | Protocol Reserve: $${data.protocolAmount.toFixed(2)}
-          </div>
-          
-          <p style="font-size: 11px; color: #999; margin-top: 24px;">Powered by MozaikPay Nexus Protocol • Instant Zero-Loss Finality</p>
+          <p style="font-size: 12px; color: #64748b; margin-top: 20px;">Powered by MozaikPay Protocol.</p>
         </div>
-      `;
+      `,
+    };
 
-      if (process.env.NODE_ENV === "production" && RESEND_API_KEY.startsWith("re_")) {
-        await resend.emails.send({
-          from: "MozaikPay Nexus <invoicing@mozaikpay-nexus.io>",
-          to: [MERCHANT_NOTIFICATION_EMAIL],
-          subject: `[Receipt] MozaikPay Payment Settled: ${data.orderId}`,
-          html: emailHtml,
-        });
-        console.log(`[Resend Invoicing] Dispatched invoice for order ${data.orderId}`);
-      } else {
-        console.log(`[Resend Mock Mode] Verified invoice payload for order ${data.orderId}`);
-      }
-    } catch (err) {
-      console.error("[Resend Error] Failed to send email invoice:", err);
+    try {
+      const response = await axios.post("https://api.resend.com/emails", payload, {
+        headers: {
+          Authorization: `Bearer ${this.resendApiKey}`,
+          "Content-Type": "application/json",
+        },
+      });
+      console.log(`[INFO] Resend Receipt Sent successfully. Email ID: ${response.data.id}`);
+      return true;
+    } catch (err: any) {
+      console.error("[ERROR] Failed to send email via Resend:", err.response?.data || err.message);
+      return false;
     }
   }
 
-  public async postSlackOpsAlert(data: PaymentSettledPayload): Promise<void> {
-    if (!SLACK_WEBHOOK_URL) {
-      console.log(`[Slack Mock] Alert: Settled $${data.totalAmount} for ${data.orderId}`);
+  /**
+   * Dispatches operational financial alerts to Slack / Discord
+   */
+  public async sendSlackAlert(event: SplitPaymentEventData): Promise<boolean> {
+    if (!this.slackWebhookUrl) {
+      console.warn("[WARN] SLACK_WEBHOOK_URL not configured. Skipping alert.");
+      return false;
+    }
+
+    const payload = {
+      text: `🚀 *MozaikPay Payment Settled* - Order \`${event.orderIdHex.slice(0, 8)}\``,
+      blocks: [
+        {
+          type: "header",
+          text: {
+            type: "plain_text",
+            text: "💰 MozaikPay Settlement Executed",
+          },
+        },
+        {
+          type: "section",
+          fields: [
+            { type: "mrkdwn", text: `*Gross Volume:*\n$${(event.grossAmount / 1e6).toFixed(2)}` },
+            { type: "mrkdwn", text: `*Merchant Net:*\n$${(event.merchantAmount / 1e6).toFixed(2)}` },
+            { type: "mrkdwn", text: `*Platform Fee:*\n$${(event.platformFee / 1e6).toFixed(2)}` },
+            { type: "mrkdwn", text: `*Tax Reserve:*\n$${(event.taxAmount / 1e6).toFixed(2)}` },
+          ],
+        },
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `*Signature:* <https://solscan.io/tx/${event.signature}?cluster=devnet|${event.signature.slice(0, 16)}...>`,
+          },
+        },
+      ],
+    };
+
+    try {
+      await axios.post(this.slackWebhookUrl, payload);
+      console.log("[INFO] Slack notification dispatched successfully.");
+      return true;
+    } catch (err: any) {
+      console.error("[ERROR] Failed to send Slack alert:", err.response?.data || err.message);
+      return false;
+    }
+  }
+
+  /**
+   * Idempotently process incoming payment confirmation events
+   */
+  public async handlePaymentSettled(
+    event: SplitPaymentEventData,
+    customerEmail?: string
+  ): Promise<void> {
+    if (this.processedSignatures.has(event.signature)) {
+      console.log(`[SKIP] Duplicate signature encountered: ${event.signature}`);
       return;
     }
 
-    try {
-      await axios.post(SLACK_WEBHOOK_URL, {
-        blocks: [
-          {
-            type: "header",
-            text: {
-              type: "plain_text",
-              text: "⚡ MozaikPay Nexus: Settlement Confirmed",
-              emoji: true,
-            },
-          },
-          {
-            type: "section",
-            fields: [
-              { type: "mrkdwn", text: `*Order ID:*\n\`${data.orderId}\`` },
-              { type: "mrkdwn", text: `*Total Settled:*\n$${data.totalAmount.toFixed(2)} USDC` },
-              { type: "mrkdwn", text: `*Merchant Net:*\n$${data.merchantAmount.toFixed(2)}` },
-              { type: "mrkdwn", text: `*Affiliate Split:*\n$${data.affiliateAmount.toFixed(2)}` },
-            ],
-          },
-          {
-            type: "context",
-            elements: [
-              {
-                type: "mrkdwn",
-                text: `Tx Signature: <https://solscan.io/tx/${data.signature}?cluster=devnet|${data.signature.slice(0, 12)}...>`,
-              },
-            ],
-          },
-        ],
-      });
-      console.log(`[Slack Ops] Posted notification for ${data.orderId}`);
-    } catch (err) {
-      console.error("[Slack Error] Failed to post Slack ops notification:", err);
-    }
+    this.processedSignatures.add(event.signature);
+    console.log(`[PROCESS] Ingesting Payment for Order: ${event.orderIdHex}`);
+
+    await Promise.all([
+      this.sendSlackAlert(event),
+      customerEmail ? this.sendCustomerReceipt(customerEmail, event) : Promise.resolve(false),
+    ]);
   }
 }
 
+// -----------------------------------------------------------------------------
+// Interactive CLI Driver
+// -----------------------------------------------------------------------------
+async function runCli() {
+  const orchestrator = new MozaikFlowEnterpriseOrchestrator();
+
+  console.log("=== MozaikFlow Enterprise Worker Initialized ===");
+  const mockEvent: SplitPaymentEventData = {
+    orderIdHex: "0x4a9df36b9012cdfae51249b0129bcdef124890abcdef1234567890abcdef1234",
+    payer: Keypair.generate().publicKey.toBase58(),
+    merchantConfig: Keypair.generate().publicKey.toBase58(),
+    grossAmount: 100_000_000, // 100.00 USDC
+    merchantAmount: 85_000_000, // 85.00 USDC (85%)
+    platformFee: 10_000_000,    // 10.00 USDC (10%)
+    taxAmount: 5_000_000,       // 5.00 USDC (5%)
+    timestamp: Math.floor(Date.now() / 1000),
+    signature: "5VERv8NMvQbJepNz9Tr6aV7yNn51U5oY6z3p4v38sK4uWbV2Yp8vJbL7pB5C5nK4uWbV2Yp8vJbL7pB5C5nK",
+  };
+
+  await orchestrator.handlePaymentSettled(mockEvent, "buyer-receipt@example.com");
+}
+
 if (require.main === module) {
-  const daemon = new MozaikPayDaemon();
-  daemon.start().catch(console.error);
+  runCli().catch(console.error);
 }

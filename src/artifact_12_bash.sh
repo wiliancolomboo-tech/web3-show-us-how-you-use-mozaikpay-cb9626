@@ -1,8 +1,4 @@
-curl -X POST http://localhost:3000/api/checkout \
-  -H "Content-Type: application/json" \
-  -d '{
-    "orderId": "PO-SMOKE-2025",
-    "amountUsdc": 25.00,
-    "customerEmail": "lead_architect@enterprise.io",
-    "customerName": "Sponsor Judge"
-  }'
+git clone https://github.com/your-org/streammosaic-mozaikpay.git
+cd streammosaic-mozaikpay
+cp .env.example .env
+# Edit .env with your real MozaikPay Merchant Key & Webhook Secret

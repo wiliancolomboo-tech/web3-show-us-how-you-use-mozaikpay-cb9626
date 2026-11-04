@@ -1,27 +1,40 @@
 flowchart TD
-    subgraph ClientLayer ["Client & Customer Layer"]
-        A[Customer / Subscriber Wallet] -->|1. Sign & Submit Checkout / Subscription Tx| B[MozaikPay Nexus Web SDK]
+    subgraph ClientLayer ["Client / Checkout Layer"]
+        User["End Consumer / Web3 Shopper"]
+        UI["Merchant Storefront & MozaikPay SDK"]
     end
 
-    subgraph SolanaOnChain ["Solana Blockchain (MozaikPay Nexus Core Engine)"]
-        B -->|2. Route Settlement Instruction| C{Nexus Settlement Program}
-        C -->|3a. Check Allowances & Time Window| D[(Subscriber PDA Vault)]
-        C -->|3b. Atomic Multi-Split Transfer| E[SPL Token / Token-2022 Mint USDC]
-        E -->|Transfer 85%| F[Merchant Treasury PDA]
-        E -->|Transfer 10%| G[Affiliate / Partner Account]
-        E -->|Transfer 5%| H[Protocol Reserve / Fee Sink]
-        C -->|4. Emit PaymentSettled Event & Memo| I[Transaction Log & Ledger]
+    subgraph MozaikFlowEngine ["MozaikFlow Orchestration Service"]
+        API["Fastify / Express Gateway"]
+        Redis[("Redis Idempotency & Nonce Cache")]
+        Dispatcher["Enterprise Webhook & Alert Dispatcher"]
     end
 
-    subgraph DaemonLayer ["Off-Chain Enterprise Gateway Daemon"]
-        I -->|5. WebSocket Slot Listener / RPC Polling| J[MozaikPay Nexus Relay Daemon]
-        J -->|6. Idempotency Check & Replay Defense| K[(Redis / SQLite State Cache)]
-        K -->|State: Valid & Unprocessed| L[Cryptographic Receipt Generator]
+    subgraph SolanaNetwork ["Solana On-Chain Infrastructure"]
+        RouterContract["MozaikFlow Settlement Router (Anchor)"]
+        MozaikPayRef["Solana Pay / MozaikPay Reference Keypair"]
+        MerchantATA["Merchant Token Account (USDC)"]
+        AffiliateATA["Affiliate Token Account (USDC)"]
+        TreasuryATA["Protocol Treasury ATA"]
     end
 
-    subgraph EnterpriseServices ["Enterprise External APIs"]
-        L -->|7. Disptach Tax-Compliant Invoice| M[Resend API - HTML/PDF Invoicing]
-        M -->|Deliver Email Receipt| N[Customer Inbox]
-        L -->|8. Push Real-Time Settlement Alert| O[Slack Webhook / Ops Channel]
-        O -->|Merchant Alerts| P[Enterprise Accounting Slack]
+    subgraph ExternalSaaS ["Enterprise Notification Matrix"]
+        Slack["Slack Operations Webhook"]
+        Resend["Resend API (Email Invoices)"]
     end
+
+    User -->|1. Selects Item / Plan| UI
+    UI -->|2. Request Invoice / Checkout Session| API
+    API -->|3. Generate Reference Keypair & Invoice State| Redis
+    API -->|4. Return MozaikPay Payment URI| UI
+    UI -->|5. Present Solana Pay QR / Wallet Deep Link| User
+    User -->|6. Sign & Submit Transfer Split Tx| SolanaNetwork
+    SolanaNetwork -->|7. Execute Atomic Split & Reference Bind| RouterContract
+    RouterContract -->|8a. 90% Net Settlement| MerchantATA
+    RouterContract -->|8b. 8% Affiliate Share| AffiliateATA
+    RouterContract -->|8c. 2% Platform Fee| TreasuryATA
+    SolanaNetwork -->|9. Commitment 'Finalized' Event| API
+    API -->|10. Verify Signature, Reference & Amount| Redis
+    API -->|11. Trigger Async Enterprise Alerts| Dispatcher
+    Dispatcher -->|12. Push Ops Receipt| Slack
+    Dispatcher -->|13. Send Customer Tax Invoice| Resend

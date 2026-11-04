@@ -1,12 +1,13 @@
-+-----------------------------------------------------------------------------------------+
-|                                    VALUE COMPARISON MATRIX                              |
-+--------------------------+-----------------------+---------------------+----------------+
-| Metric                   | Legacy Web2 (Stripe)  | Generic Solana Pay  | MozaikPulse    |
-+--------------------------+-----------------------+---------------------+----------------+
-| Settlement Finality      | 2 - 7 Days            | ~400ms              | ~400ms         |
-| Payment Processing Fee   | 2.9% + $0.30          | ~0.000005 SOL       | < 0.05% + Rent |
-| Chargeback Risk          | High (120-day window) | 0% (Immutable)      | 0% (Immutable) |
-| On-Chain Split Engine    | Off-chain batching    | Manual multisig     | Atomic 3-Way   |
-| Enterprise ERP Webhooks  | Native proprietary    | Custom dev required | Native Resend/ |
-|                          |                       |                     | Slack / REST   |
-+--------------------------+-----------------------+---------------------+----------------+
++------------------------------------------------------------------------------------------------+
+|                                    MOZAIKFLOW ENTERPRISE SUITE                                 |
+|                                                                                                |
+|  [ Customer / dApp ] ----> [ MozaikPay Split Engine ] ----> [ Atomic On-Chain SPL Router ]     |
+|                                          |                                 |                   |
+|                                          v                                 v                   |
+|                             [ Ed25519 Ingestion Daemon ]         [ Multi-Party Settlement ]    |
+|                                          |                      - Merchant (85%)               |
+|                     +--------------------+----------------+     - Platform Fee (10%)           |
+|                     |                                     |     - Tax / Reserve Vault (5%)     |
+|                     v                                     v                                    |
+|        [ Resend Invoice Engine ]             [ Slack Telemetry Dispatcher ]                    |
++------------------------------------------------------------------------------------------------+

@@ -1,123 +1,144 @@
-// programs/mozaikflow-settlement/src/lib.rs
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Mint, Token, TokenAccount, TransferChecked};
+use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
-declare_id!("MoZaiKPAY1111111111111111111111111111111111");
+declare_id!("MzkFLow111111111111111111111111111111111111");
+
+pub const CONFIG_SEED: &[u8] = b"merchant_config";
+pub const INVOICE_SEED: &[u8] = b"invoice_receipt";
+
+// Basis points denominator (10,000 = 100%)
+pub const BPS_DENOMINATOR: u64 = 10_000;
+pub const MAX_AFFILIATE_BPS: u64 = 3_000; // Max 30%
+pub const PROTOCOL_FEE_BPS: u64 = 200;    // 2.0%
 
 #[program]
 pub mod mozaikflow_settlement {
     use super::*;
 
-    /// Initialize a merchant configuration and billing terms
+    /// Initialize a merchant's payment parameters and split payout accounts.
     pub fn initialize_merchant(
         ctx: Context<InitializeMerchant>,
-        merchant_name: String,
-        basis_points_tax: u16,
+        affiliate_bps: u64,
     ) -> Result<()> {
-        require!(merchant_name.len() <= 64, MozaikError::StringTooLong);
-        require!(basis_points_tax <= 3000, MozaikError::InvalidTaxBasisPoints); // Max 30%
-
-        let config = &mut ctx.accounts.merchant_config;
-        config.merchant_authority = ctx.accounts.authority.key();
-        config.settlement_vault = ctx.accounts.settlement_vault.key();
-        config.tax_vault = ctx.accounts.tax_vault.key();
-        config.accepted_mint = ctx.accounts.accepted_mint.key();
-        config.basis_points_tax = basis_points_tax;
-        config.merchant_name = merchant_name;
-        config.bump = ctx.bumps.merchant_config;
-
-        emit!(MerchantConfiguredEvent {
-            merchant: ctx.accounts.authority.key(),
-            accepted_mint: ctx.accounts.accepted_mint.key(),
-            tax_rate_bps: basis_points_tax,
-        });
-
-        Ok(())
-    }
-
-    /// Create an on-chain MozaikPay-compatible Invoice PDA
-    pub fn create_invoice(
-        ctx: Context<CreateInvoice>,
-        invoice_id: String,
-        amount_required: u64,
-        expiry_timestamp: i64,
-        reference_key: Pubkey,
-    ) -> Result<()> {
-        require!(invoice_id.len() <= 32, MozaikError::StringTooLong);
-        require!(amount_required > 0, MozaikError::ZeroPaymentAmount);
-        
-        let clock = Clock::get()?;
         require!(
-            expiry_timestamp > clock.unix_timestamp,
-            MozaikError::InvalidExpiryTimestamp
+            affiliate_bps <= MAX_AFFILIATE_BPS,
+            MozaikError::InvalidAffiliateBps
         );
 
-        let invoice = &mut ctx.accounts.invoice;
-        invoice.merchant = ctx.accounts.merchant_config.key();
-        invoice.invoice_id = invoice_id.clone();
-        invoice.amount_required = amount_required;
-        invoice.amount_paid = 0;
-        invoice.expiry_timestamp = expiry_timestamp;
-        invoice.reference_key = reference_key;
-        invoice.status = InvoiceStatus::Pending;
-        invoice.bump = ctx.bumps.invoice;
+        let merchant_config = &mut ctx.accounts.merchant_config;
+        merchant_config.merchant_authority = ctx.accounts.merchant_authority.key();
+        merchant_config.settlement_mint = ctx.accounts.settlement_mint.key();
+        merchant_config.merchant_vault = ctx.accounts.merchant_vault.key();
+        merchant_config.affiliate_vault = ctx.accounts.affiliate_vault.key();
+        merchant_config.treasury_vault = ctx.accounts.treasury_vault.key();
+        merchant_config.affiliate_bps = affiliate_bps;
+        merchant_config.protocol_fee_bps = PROTOCOL_FEE_BPS;
+        merchant_config.bump = ctx.bumps.merchant_config;
+        merchant_config.is_active = true;
 
-        emit!(InvoiceCreatedEvent {
-            invoice_id,
-            merchant: ctx.accounts.merchant_config.key(),
-            amount: amount_required,
-            reference: reference_key,
+        emit!(MerchantConfigInitialized {
+            merchant: merchant_config.merchant_authority,
+            settlement_mint: merchant_config.settlement_mint,
+            affiliate_bps,
+            protocol_fee_bps: PROTOCOL_FEE_BPS,
         });
 
         Ok(())
     }
 
-    /// Settle the invoice atomically splitting principal to merchant and tax to ops vault
-    pub fn settle_invoice(ctx: Context<SettleInvoice>) -> Result<()> {
-        let invoice = &mut ctx.accounts.invoice;
+    /// Process atomic payment, split shares, and log deterministic reference receipt.
+    pub fn process_payment(
+        ctx: Context<ProcessPayment>,
+        invoice_id: [u8; 32],
+        expected_amount: u64,
+    ) -> Result<()> {
         let config = &ctx.accounts.merchant_config;
-        let clock = Clock::get()?;
+        require!(config.is_active, MozaikError::MerchantInactive);
+        require!(expected_amount > 0, MozaikError::ZeroPaymentAmount);
 
-        require!(invoice.status == InvoiceStatus::Pending, MozaikError::InvoiceNotPending);
-        require!(clock.unix_timestamp <= invoice.expiry_timestamp, MozaikError::InvoiceExpired);
+        // Calculate split allocations
+        let protocol_share = expected_amount
+            .checked_mul(config.protocol_fee_bps)
+            .ok_or(MozaikError::MathOverflow)?
+            .checked_div(BPS_DENOMINATOR)
+            .ok_or(MozaikError::MathOverflow)?;
 
-        let total_amount = invoice.amount_required;
-        let tax_amount = (total_amount as u128 * config.basis_points_tax as u128 / 10_000) as u64;
-        let merchant_amount = total_amount.checked_sub(tax_amount).ok_or(MozaikError::MathUnderflow)?;
+        let affiliate_share = expected_amount
+            .checked_mul(config.affiliate_bps)
+            .ok_or(MozaikError::MathOverflow)?
+            .checked_div(BPS_DENOMINATOR)
+            .ok_or(MozaikError::MathOverflow)?;
 
-        // 1. Transfer merchant portion
-        let cpi_accounts_merchant = TransferChecked {
-            from: ctx.accounts.payer_token_account.to_account_info(),
-            mint: ctx.accounts.token_mint.to_account_info(),
-            to: ctx.accounts.merchant_settlement_vault.to_account_info(),
-            authority: ctx.accounts.payer.to_account_info(),
-        };
-        let cpi_program = ctx.accounts.token_program.to_account_info();
-        let cpi_ctx_merchant = CpiContext::new(cpi_program.clone(), cpi_accounts_merchant);
-        token::transfer_checked(cpi_ctx_merchant, merchant_amount, ctx.accounts.token_mint.decimals)?;
+        let merchant_share = expected_amount
+            .checked_sub(protocol_share)
+            .ok_or(MozaikError::MathOverflow)?
+            .checked_sub(affiliate_share)
+            .ok_or(MozaikError::MathOverflow)?;
 
-        // 2. Transfer tax/reserve portion if configured
-        if tax_amount > 0 {
-            let cpi_accounts_tax = TransferChecked {
-                from: ctx.accounts.payer_token_account.to_account_info(),
-                mint: ctx.accounts.token_mint.to_account_info(),
-                to: ctx.accounts.tax_vault.to_account_info(),
-                authority: ctx.accounts.payer.to_account_info(),
-            };
-            let cpi_ctx_tax = CpiContext::new(cpi_program, cpi_accounts_tax);
-            token::transfer_checked(cpi_ctx_tax, tax_amount, ctx.accounts.token_mint.decimals)?;
+        // 1. Transfer protocol share
+        if protocol_share > 0 {
+            token::transfer(
+                CpiContext::new(
+                    ctx.accounts.token_program.to_account_info(),
+                    Transfer {
+                        from: ctx.accounts.payer_token_account.to_account_info(),
+                        to: ctx.accounts.treasury_vault.to_account_info(),
+                        authority: ctx.accounts.payer.to_account_info(),
+                    },
+                ),
+                protocol_share,
+            )?;
         }
 
-        // 3. Mutate invoice state
-        invoice.amount_paid = total_amount;
-        invoice.status = InvoiceStatus::Settled;
+        // 2. Transfer affiliate share
+        if affiliate_share > 0 {
+            token::transfer(
+                CpiContext::new(
+                    ctx.accounts.token_program.to_account_info(),
+                    Transfer {
+                        from: ctx.accounts.payer_token_account.to_account_info(),
+                        to: ctx.accounts.affiliate_vault.to_account_info(),
+                        authority: ctx.accounts.payer.to_account_info(),
+                    },
+                ),
+                affiliate_share,
+            )?;
+        }
 
-        emit!(InvoiceSettledEvent {
-            invoice_id: invoice.invoice_id.clone(),
+        // 3. Transfer merchant net share
+        token::transfer(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.payer_token_account.to_account_info(),
+                    to: ctx.accounts.merchant_vault.to_account_info(),
+                    authority: ctx.accounts.payer.to_account_info(),
+                },
+            ),
+            merchant_share,
+        )?;
+
+        // Record receipt state PDA to ensure strict idempotency on-chain
+        let receipt = &mut ctx.accounts.invoice_receipt;
+        receipt.invoice_id = invoice_id;
+        receipt.payer = ctx.accounts.payer.key();
+        receipt.reference = ctx.accounts.payment_reference.key();
+        receipt.total_amount = expected_amount;
+        receipt.merchant_share = merchant_share;
+        receipt.affiliate_share = affiliate_share;
+        receipt.protocol_share = protocol_share;
+        receipt.timestamp = Clock::get()?.unix_timestamp;
+        receipt.bump = ctx.bumps.invoice_receipt;
+
+        emit!(PaymentSettled {
+            invoice_id,
             payer: ctx.accounts.payer.key(),
-            merchant_payout: merchant_amount,
-            tax_payout: tax_amount,
-            settled_at: clock.unix_timestamp,
+            reference: ctx.accounts.payment_reference.key(),
+            total_amount: expected_amount,
+            merchant_share,
+            affiliate_share,
+            protocol_share,
+            timestamp: receipt.timestamp,
         });
 
         Ok(())
@@ -125,177 +146,169 @@ pub mod mozaikflow_settlement {
 }
 
 // -----------------------------------------------------------------------------
-// Account Contexts
+// ACCOUNT VALIDATION STRUCTS
 // -----------------------------------------------------------------------------
 
 #[derive(Accounts)]
-#[instruction(merchant_name: String, basis_points_tax: u16)]
+#[instruction(affiliate_bps: u64)]
 pub struct InitializeMerchant<'info> {
-    #[account(
-        init,
-        payer = authority,
-        space = 8 + 32 + 32 + 32 + 32 + 2 + (4 + 64) + 1,
-        seeds = [b"merchant", authority.key().as_ref()],
-        bump
-    )]
-    pub merchant_config: Account<'info, MerchantConfig>,
-    
-    pub accepted_mint: Account<'info, Mint>,
-
-    #[account(
-        constraint = settlement_vault.mint == accepted_mint.key(),
-        constraint = settlement_vault.owner == authority.key()
-    )]
-    pub settlement_vault: Account<'info, TokenAccount>,
-
-    #[account(
-        constraint = tax_vault.mint == accepted_mint.key()
-    )]
-    pub tax_vault: Account<'info, TokenAccount>,
-
     #[account(mut)]
-    pub authority: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-#[instruction(invoice_id: String)]
-pub struct CreateInvoice<'info> {
-    #[account(
-        mut,
-        has_one = merchant_authority @ MozaikError::UnauthorizedMerchant
-    )]
-    pub merchant_config: Account<'info, MerchantConfig>,
     pub merchant_authority: Signer<'info>,
+
+    pub settlement_mint: Account<'info, Mint>,
 
     #[account(
         init,
         payer = merchant_authority,
-        space = 8 + 32 + (4 + 32) + 8 + 8 + 8 + 32 + 1 + 1,
-        seeds = [b"invoice", merchant_config.key().as_ref(), invoice_id.as_bytes()],
+        space = 8 + MerchantConfig::INIT_SPACE,
+        seeds = [CONFIG_SEED, merchant_authority.key().as_ref(), settlement_mint.key().as_ref()],
         bump
-    )]
-    pub invoice: Account<'info, InvoiceAccount>,
-
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct SettleInvoice<'info> {
-    #[account(
-        mut,
-        seeds = [b"invoice", invoice.merchant.as_ref(), invoice.invoice_id.as_bytes()],
-        bump = invoice.bump
-    )]
-    pub invoice: Account<'info, InvoiceAccount>,
-
-    #[account(
-        seeds = [b"merchant", merchant_config.merchant_authority.as_ref()],
-        bump = merchant_config.bump,
-        constraint = invoice.merchant == merchant_config.key()
     )]
     pub merchant_config: Account<'info, MerchantConfig>,
 
-    pub token_mint: Account<'info, Mint>,
+    #[account(
+        constraint = merchant_vault.mint == settlement_mint.key() @ MozaikError::InvalidMintMismatch
+    )]
+    pub merchant_vault: Account<'info, TokenAccount>,
+
+    #[account(
+        constraint = affiliate_vault.mint == settlement_mint.key() @ MozaikError::InvalidMintMismatch
+    )]
+    pub affiliate_vault: Account<'info, TokenAccount>,
+
+    #[account(
+        constraint = treasury_vault.mint == settlement_mint.key() @ MozaikError::InvalidMintMismatch
+    )]
+    pub treasury_vault: Account<'info, TokenAccount>,
+
+    pub system_program: Program<'info, System>,
+    pub token_program: Program<'info, Token>,
+    pub rent: Sysvar<'info, Rent>,
+}
+
+#[derive(Accounts)]
+#[instruction(invoice_id: [u8; 32])]
+pub struct ProcessPayment<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
 
     #[account(
         mut,
-        constraint = payer_token_account.mint == token_mint.key(),
-        constraint = payer_token_account.owner == payer.key()
+        constraint = payer_token_account.owner == payer.key() @ MozaikError::PayerMismatch,
+        constraint = payer_token_account.mint == merchant_config.settlement_mint @ MozaikError::InvalidMintMismatch
     )]
     pub payer_token_account: Account<'info, TokenAccount>,
 
     #[account(
-        mut,
-        constraint = merchant_settlement_vault.key() == merchant_config.settlement_vault
+        seeds = [CONFIG_SEED, merchant_config.merchant_authority.as_ref(), merchant_config.settlement_mint.as_ref()],
+        bump = merchant_config.bump
     )]
-    pub merchant_settlement_vault: Account<'info, TokenAccount>,
+    pub merchant_config: Account<'info, MerchantConfig>,
 
     #[account(
         mut,
-        constraint = tax_vault.key() == merchant_config.tax_vault
+        address = merchant_config.merchant_vault @ MozaikError::UnauthorizedVault
     )]
-    pub tax_vault: Account<'info, TokenAccount>,
+    pub merchant_vault: Account<'info, TokenAccount>,
 
-    pub payer: Signer<'info>,
+    #[account(
+        mut,
+        address = merchant_config.affiliate_vault @ MozaikError::UnauthorizedVault
+    )]
+    pub affiliate_vault: Account<'info, TokenAccount>,
+
+    #[account(
+        mut,
+        address = merchant_config.treasury_vault @ MozaikError::UnauthorizedVault
+    )]
+    pub treasury_vault: Account<'info, TokenAccount>,
+
+    /// CHECK: MozaikPay Solana Pay reference pubkey. Must be passed as non-signer for index tracking.
+    pub payment_reference: AccountInfo<'info>,
+
+    #[account(
+        init,
+        payer = payer,
+        space = 8 + InvoiceReceipt::INIT_SPACE,
+        seeds = [INVOICE_SEED, invoice_id.as_ref()],
+        bump
+    )]
+    pub invoice_receipt: Account<'info, InvoiceReceipt>,
+
     pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
 }
 
 // -----------------------------------------------------------------------------
-// State Definitions & Error Codes
+// STATE DEFINITIONS
 // -----------------------------------------------------------------------------
 
 #[account]
+#[derive(InitSpace)]
 pub struct MerchantConfig {
     pub merchant_authority: Pubkey,
-    pub accepted_mint: Pubkey,
-    pub settlement_vault: Pubkey,
-    pub tax_vault: Pubkey,
-    pub basis_points_tax: u16,
-    pub merchant_name: String,
+    pub settlement_mint: Pubkey,
+    pub merchant_vault: Pubkey,
+    pub affiliate_vault: Pubkey,
+    pub treasury_vault: Pubkey,
+    pub affiliate_bps: u64,
+    pub protocol_fee_bps: u64,
     pub bump: u8,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]
-pub enum InvoiceStatus {
-    Pending,
-    Settled,
-    Expired,
-    Cancelled,
+    pub is_active: bool,
 }
 
 #[account]
-pub struct InvoiceAccount {
-    pub merchant: Pubkey,
-    pub invoice_id: String,
-    pub amount_required: u64,
-    pub amount_paid: u64,
-    pub expiry_timestamp: i64,
-    pub reference_key: Pubkey,
-    pub status: InvoiceStatus,
+#[derive(InitSpace)]
+pub struct InvoiceReceipt {
+    pub invoice_id: [u8; 32],
+    pub payer: Pubkey,
+    pub reference: Pubkey,
+    pub total_amount: u64,
+    pub merchant_share: u64,
+    pub affiliate_share: u64,
+    pub protocol_share: u64,
+    pub timestamp: i64,
     pub bump: u8,
+}
+
+// -----------------------------------------------------------------------------
+// EVENTS & ERRORS
+// -----------------------------------------------------------------------------
+
+#[event]
+pub struct MerchantConfigInitialized {
+    pub merchant: Pubkey,
+    pub settlement_mint: Pubkey,
+    pub affiliate_bps: u64,
+    pub protocol_fee_bps: u64,
+}
+
+#[event]
+pub struct PaymentSettled {
+    pub invoice_id: [u8; 32],
+    pub payer: Pubkey,
+    pub reference: Pubkey,
+    pub total_amount: u64,
+    pub merchant_share: u64,
+    pub affiliate_share: u64,
+    pub protocol_share: u64,
+    pub timestamp: i64,
 }
 
 #[error_code]
 pub enum MozaikError {
-    #[msg("Input string exceeds designated byte capacity")]
-    StringTooLong,
-    #[msg("Tax fee basis points cannot exceed 3000 (30%)")]
-    InvalidTaxBasisPoints,
-    #[msg("Invoice payment amount must be greater than zero")]
+    #[msg("Affiliate basis points exceeds allowed threshold of 3000 bps")]
+    InvalidAffiliateBps,
+    #[msg("Merchant configuration is currently deactivated")]
+    MerchantInactive,
+    #[msg("Payment amount must be greater than zero")]
     ZeroPaymentAmount,
-    #[msg("Expiry timestamp must be positioned in the future")]
-    InvalidExpiryTimestamp,
-    #[msg("Signer does not maintain authority over this merchant config")]
-    UnauthorizedMerchant,
-    #[msg("Invoice is not in pending state")]
-    InvoiceNotPending,
-    #[msg("Invoice has expired past its valid deadline")]
-    InvoiceExpired,
-    #[msg("Arithmetic underflow during fee split calculation")]
-    MathUnderflow,
-}
-
-#[event]
-pub struct MerchantConfiguredEvent {
-    pub merchant: Pubkey,
-    pub accepted_mint: Pubkey,
-    pub tax_rate_bps: u16,
-}
-
-#[event]
-pub struct InvoiceCreatedEvent {
-    pub invoice_id: String,
-    pub merchant: Pubkey,
-    pub amount: u64,
-    pub reference: Pubkey,
-}
-
-#[event]
-pub struct InvoiceSettledEvent {
-    pub invoice_id: String,
-    pub payer: Pubkey,
-    pub merchant_payout: u64,
-    pub tax_payout: u64,
-    pub settled_at: i64,
+    #[msg("Token account mint does not match merchant settlement mint")]
+    InvalidMintMismatch,
+    #[msg("Specified payer does not own the payer token account")]
+    PayerMismatch,
+    #[msg("Provided vault does not match the merchant registered vault address")]
+    UnauthorizedVault,
+    #[msg("Arithmetic overflow occurred during revenue split calculation")]
+    MathOverflow,
 }

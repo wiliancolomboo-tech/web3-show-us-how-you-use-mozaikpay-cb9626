@@ -1,14 +1,9 @@
-# Solana Configuration
+PORT=4000
 SOLANA_RPC_URL=https://api.devnet.solana.com
-SOLANA_NETWORK=devnet
-
-# MozaikPay Credentials
-MOZAIKPAY_API_KEY=mzk_live_dummy_sample_api_key
-MOZAIKPAY_WEBHOOK_PUBKEY=1111111111111111111111111111111111111111111111111111111111111111
-
-# Enterprise Connectors
-RESEND_API_KEY=re_dummy_sample_key_placeholder
-SLACK_WEBHOOK_URL=https://api.example.com/webhooks/alerts/placeholder
-
-# Relayer Service
-PORT=8080
+SOLANA_CLUSTER=devnet
+PROGRAM_ID=MzkFLow111111111111111111111111111111111111
+MERCHANT_PRIVATE_KEY=your_base58_private_key_here
+RESEND_API_KEY=re_1234567890abcdef
+SUPPORT_EMAIL_FROM=billing@yourdomain.com
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T00/B00/XXXXX
+USDC_MINT=4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU

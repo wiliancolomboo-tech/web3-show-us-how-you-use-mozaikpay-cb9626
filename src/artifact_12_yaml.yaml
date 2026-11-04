@@ -1,22 +1,26 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  mozaikpulse-worker:
+  mozaikflow-gateway:
     build:
       context: .
       dockerfile: Dockerfile
-    restart: always
-    env_file:
-      - .env
+    container_name: mozaikflow-gateway
+    restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - SOLANA_RPC_URL=${SOLANA_RPC_URL}
+      - SOLANA_CLUSTER=${SOLANA_CLUSTER:-devnet}
+      - PROGRAM_ID=${PROGRAM_ID}
+      - MERCHANT_PRIVATE_KEY=${MERCHANT_PRIVATE_KEY}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - SUPPORT_EMAIL_FROM=${SUPPORT_EMAIL_FROM}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+      - USDC_MINT=${USDC_MINT}
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/healthz"]
-      interval: 15s
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/healthz"]
+      interval: 10s
       timeout: 5s
       retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "20m"
-        max-file: "5"

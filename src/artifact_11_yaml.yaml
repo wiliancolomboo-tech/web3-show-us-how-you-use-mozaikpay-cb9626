@@ -1,20 +1,23 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  mozaik-sentinel-gateway:
+  streammosaic-mozaikpay:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: mozaik-sentinel-gateway
-    restart: always
+    container_name: stream-mosaic-daemon
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       - PORT=3000
-      - SOLANA_RPC_URL=https://api.devnet.solana.com
-      - RESEND_API_KEY=${RESEND_API_KEY:-re_dummy_sample_key_placeholder}
-      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-https://api.example.com/webhooks/alerts/placeholder
-      - MERCHANT_VAULT=4Nd1mBQtrMK8u5Wv1Y3vU3rN6oFm9k2P1y5uN9qL4bZ1
+      - NODE_ENV=production
+      - MOZAIK_API_KEY=${MOZAIK_API_KEY:-mozaik_live_default_key}
+      - MOZAIK_API_URL=${MOZAIK_API_URL:-https://api.mozaikpay.com/v1}
+      - MOZAIK_WEBHOOK_SECRET=${MOZAIK_WEBHOOK_SECRET:-mozaik_whsec_prod_secret_89f029}
+      - SOLANA_RPC_URL=${SOLANA_RPC_URL:-https://api.mainnet-beta.solana.com}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/healthz"]
       interval: 15s

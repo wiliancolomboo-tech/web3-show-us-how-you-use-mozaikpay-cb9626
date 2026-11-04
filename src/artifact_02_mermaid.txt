@@ -1,32 +1,37 @@
 flowchart TD
-    subgraph ClientLayer ["1. Customer / Point of Sale"]
-        A["Customer / Client App"] -->|"Requests Checkout"| B["MozaikPulse POS API"]
-        B -->|"Generates QR / Solana Pay URL"| C["Mobile Wallet Phantom / Solflare"]
+    subgraph Client Layer
+        U[Payer / Customer]
+        M[Merchant Storefront / SaaS]
     end
 
-    subgraph MozaikContract ["2. Solana MozaikPay On-Chain Engine"]
-        C -->|"Signs & Submits settle_invoice Transaction"| D["Mozaik Enterprise Contract"]
-        D -->|"Validates Expiry & Nonce"| E{"State Verification"}
-        E -->|Expired / Invalid| F["Revert: TransactionAborted"]
-        E -->|Valid| G["Execute Atomic SPL Token Split"]
-        G -->|"Merchant BPS"| H["Merchant Token Account"]
-        G -->|"Tax Reserve BPS"| I["Tax Escrow Token Account"]
-        G -->|"Platform BPS"| J["Protocol Revenue Account"]
-        G -->|"Emit Event"| K["InvoiceSettledEvent"]
+    subgraph MozaikFlow Core Solana Protocol
+        SC[MozaikPay Split Router Program]
+        ESC[(Merchant Escrow PDA)]
+        SPL[SPL Token Program / Token-2022]
+        VAULT_M[Merchant Vault]
+        VAULT_P[Platform Treasury]
+        VAULT_T[Tax Reserve Vault]
     end
 
-    subgraph IngestionWorker ["3. Enterprise Telemetry & Sync Daemon"]
-        L["Solana RPC WebSocket Geyser / Commitment: Confirmed"] -.->|"Stream Log Events"| M["MozaikPulse Daemon Listener"]
-        K -.-> L
-        M -->|"Deduplicate via Redis ID Cache"| N{"Idempotency Gate"}
-        N -->|Duplicate| O["Acknowledge & Drop"]
-        N -->|New Event| P["Process Transaction Payload"]
+    subgraph Off-Chain Enterprise Orchestration
+        RPC[Solana Geyser / WebSocket RPC]
+        DAEMON[MozaikFlow Ingestion Engine]
+        DB[(PostgreSQL / Redis Idempotency)]
     end
 
-    subgraph EnterpriseDispatch ["4. External Enterprise Integration Adapters"]
-        P -->|"POST JSON Payload"| Q["Resend Transactional Email Engine"]
-        P -->|"POST Rich Block Message"| R["Corporate Slack / Discord Operations Channel"]
-        P -->|"Sign HMAC-SHA256 Hook"| S["Merchant Enterprise ERP / SAP / NetSuite"]
-        Q -->|"Deliver PDF Proof-of-Payment"| T["Customer Inbox"]
-        R -->|"Notify CFO / Treasury"| U["Treasury Ops Room"]
+    subgraph Enterprise Services
+        RESEND[Resend API: Customer Invoices]
+        SLACK[Slack/Discord Enterprise Webhook]
     end
+
+    U -->|1. Select Checkout & Pay| M
+    M -->|2. Initialize Payment Session| SC
+    SC -->|3. Transfer SPL/SOL into Atomic Split| SPL
+    SPL -->|4a. 85% Deposit| VAULT_M
+    SPL -->|4b. 10% Deposit| VAULT_P
+    SPL -->|4c. 5% Deposit| VAULT_T
+    SC -->|5. Emit PaymentFinalized Event| RPC
+    RPC -->|6. Stream Log Notifications| DAEMON
+    DAEMON -->|7. Verify Ed25519 & Check Nonce| DB
+    DAEMON -->|8. Generate & Send PDF Receipt| RESEND
+    DAEMON -->|9. Post Audit Log & Financial Alert| SLACK

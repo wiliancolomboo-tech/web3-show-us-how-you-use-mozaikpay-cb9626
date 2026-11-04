@@ -1,20 +1,20 @@
-🧵 1/3: Web3 recurring subscriptions are finally frictionless! 🚀 
+🧵 1/3
+Excited to unveil MozaikFlow Enterprise: The autonomous B2B settlement & treasury rebalancing engine built on @MozaikPay on @Solana! ⚡️
 
-We are proud to unveil MozaikFlow — an enterprise-grade, non-custodial recurring subscription and automated multi-split revenue settlement engine built on @Solana with @MozaikPay! ⚡️
+Accept any SPL token (SOL, BONK, JUP) with on-chain idempotent escrow settlement and zero-slippage auto-conversion to USDC.
 
-Here is how we solved recurring Web3 B2B billing 👇
+Here is how it works 👇
 
-🧵 2/3: Most crypto subscription models force upfront lockups or clunky manual approvals each month. 
+🧵 2/3
+Why does this change Solana payments?
+1️⃣ Cryptographic order idempotency via Anchor PDA verification. No replay attacks.
+2️⃣ Instant DEX liquidity routing with @JupiterExchange to safeguard merchant margins.
+3️⃣ Enterprise-grade Resend receipts & Slack treasury alerting out of the box.
 
-With MozaikFlow:
-✅ Non-custodial SPL token delegation
-✅ Deterministic Anchor epoch enforcement
-✅ Atomic split disbursement to platform & affiliates
-✅ Automated invoicing via @resend & Slack ops alerting!
+🧵 3/3
+Turnkey, fully open-source, and containerized with Docker & Anchor test suites ready for production deployment.
 
-🧵 3/3: Sub-second finality, micro-penny fees, and zero custodial friction for enterprise SaaS. 
+Experience seamless web3 merchant commerce powered by @MozaikPay 🌐
+GitHub & Specs: https://github.com/mozaikflow/mozaikpay-enterprise
 
-Check out our production Anchor program, keeper daemon, and turnkey Docker setup:
-🔗 https://github.com/mozaikflow/mozaikpay-enterprise-billing
-
-Built for the @MozaikPay hackathon bounty! #Solana #Web3Payments #DeFi #MozaikPay
+#Solana #MozaikPay #DeFi #Web3Payments #Anchor
